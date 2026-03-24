@@ -1,0 +1,44 @@
+﻿@page "/products/new"
+@inject SupabaseClientService Supabase
+@inject NavigationManager Nav
+
+<MudPaper Class="pa-4 mx-auto" MaxWidth="500px" Elevation="4">
+
+    <MudText Typo="Typo.h5" Class="mb-4">新規商品追加</MudText>
+
+    <MudForm @ref="_form" Valid="OnValidSubmit">
+
+        <MudTextField @bind-Value="product.Title" Label="タイトル" Required="true" />
+        <MudTextField @bind-Value="product.Series" Label="作品名" Required="true" />
+        <MudTextField @bind-Value="product.Category" Label="カテゴリ" Required="true" />
+
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Class="mt-4"
+                   OnClick="Submit">
+            保存する
+        </MudButton>
+
+    </MudForm>
+
+</MudPaper>
+
+@code {
+    private MudForm? _form;
+
+    Product product = new();
+
+    private async Task Submit()
+    {
+        await _form!.Validate();
+
+        if (_form.IsValid)
+        {
+            await Supabase.Client
+                .From<Product>()
+                .Insert(product);
+
+            Nav.NavigateTo("/products");
+        }
+    }
+}
