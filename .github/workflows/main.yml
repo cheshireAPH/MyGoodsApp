@@ -28,7 +28,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: MyGoodsApp/MyGoodsApp/bin/Release/net10.0/publish
+        path: bin/Release/net10.0/wwwroot
 
   deploy:
     needs: build
