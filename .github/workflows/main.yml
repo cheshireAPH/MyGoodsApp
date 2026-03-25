@@ -25,15 +25,10 @@ jobs:
     - name: Publish
       run: dotnet publish ./MyGoodsApp.csproj -c Release
 
-    - name: Debug paths
-      run: |
-        pwd
-        ls -R .
-
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: bin/Release/net10.0/wwwroot
+        path: bin/Release/net10.0/publish/wwwroot
 
   deploy:
     needs: build
