@@ -2,7 +2,7 @@ name: Deploy Blazor WebAssembly to GitHub Pages
 
 on:
   push:
-    branches: [ "muster" ]
+    branches: [ "master" ]
 
 permissions:
   contents: write
