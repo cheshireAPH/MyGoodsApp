@@ -18,5 +18,11 @@
     <PackageReference Include="Supabase" Version="1.1.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="wwwroot\index.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 
 </Project>
