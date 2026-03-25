@@ -4,9 +4,6 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
-    <GHPages>true</GHPages>
-    <GHPagesBaseUrl>/MyGoodsApp/</GHPagesBaseUrl>
     <StaticWebAssetBasePath>/MyGoodsApp/</StaticWebAssetBasePath>
   </PropertyGroup>
 
