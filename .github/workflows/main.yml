@@ -23,9 +23,7 @@ jobs:
         dotnet-version: 8.0.x
 
     - name: Publish
-      run: |
-        cd MyGoodsApp
-        dotnet publish MyGoodsApp.csproj -c Release -o ../output
+      run: dotnet publish MyGoodsApp.csproj -c Release -o output
 
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
