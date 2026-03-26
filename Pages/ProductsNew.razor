@@ -2,43 +2,137 @@
 @inject SupabaseClientService Supabase
 @inject NavigationManager Nav
 
-<MudPaper Class="pa-4 mx-auto" MaxWidth="500px" Elevation="4">
+<MudPaper Class="pa-4 mx-auto" MaxWidth="800px" Elevation="4">
 
     <MudText Typo="Typo.h5" Class="mb-4">新規商品追加</MudText>
 
-    <MudForm @ref="_form" Valid="OnValidSubmit">
+    <!-- 親商品フォーム -->
+    <MudTextField @bind-Value="product.Title" Label="タイトル" Required="true" />
+    <MudTextField @bind-Value="product.Series" Label="作品名" Required="true" />
+    <MudTextField @bind-Value="product.Category" Label="カテゴリ" Required="true" />
 
-        <MudTextField @bind-Value="product.Title" Label="タイトル" Required="true" />
-        <MudTextField @bind-Value="product.Series" Label="作品名" Required="true" />
-        <MudTextField @bind-Value="product.Category" Label="カテゴリ" Required="true" />
+    <MudDivider Class="my-4" />
 
-        <MudButton Variant="Variant.Filled"
-                   Color="Color.Primary"
-                   Class="mt-4"
-                   OnClick="Submit">
-            保存する
-        </MudButton>
+    <!-- 子商品一覧 -->
+    <MudText Typo="Typo.h6">子商品</MudText>
 
-    </MudForm>
+    @foreach (var s in sources)
+    {
+        <MudExpansionPanel Text="@s.Name" Class="mb-2">
+            <MudCard Class="pa-4">
+
+                <MudTextField @bind-Value="s.Name" Label="子商品名" />
+                <MudTextField @bind-Value="s.Url" Label="URL" />
+                <MudTextField @bind-Value="s.Barcode" Label="バーコード" />
+
+                <MudDivider Class="my-2" />
+
+                <MudText Typo="Typo.subtitle1">封入品</MudText>
+
+                @foreach (var v in s.Variants)
+                {
+                    <MudCard Class="pa-3 mb-2">
+                        <MudTextField @bind-Value="v.Name" Label="名前" />
+                        <MudTextField @bind-Value="v.Caracter" Label="キャラ名" />
+                        <MudNumericField @bind-Value="v.OrderIndex" Label="並び順" />
+                        <MudTextField @bind-Value="v.Memo" Label="メモ" Lines="2" />
+
+                        <MudButton Variant="Variant.Text" Color="Color.Error"
+                                   OnClick="@(() => RemoveVariant(s, v))">
+                            封入品削除
+                        </MudButton>
+                    </MudCard>
+                }
+
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                           OnClick="@(() => AddVariant(s))">
+                    ＋ 封入品追加
+                </MudButton>
+
+                <MudDivider Class="my-2" />
+
+                <MudButton Variant="Variant.Text" Color="Color.Error"
+                           OnClick="@(() => RemoveSource(s))">
+                    子商品削除
+                </MudButton>
+
+            </MudCard>
+        </MudExpansionPanel>
+    }
+
+    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="AddSource">
+        ＋ 子商品を追加
+    </MudButton>
+
+    <MudDivider Class="my-4" />
+
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               OnClick="SaveAll">
+        すべて保存する
+    </MudButton>
 
 </MudPaper>
 
 @code {
-    private MudForm? _form;
-
     Product product = new();
+    List<VariantSource> sources = new();
 
-    private async Task Submit()
+    void AddSource()
     {
-        await _form!.Validate();
-
-        if (_form.IsValid)
+        sources.Add(new VariantSource
         {
-            await Supabase.Client
-                .From<Product>()
-                .Insert(product);
+            Variants = new List<ProductVariant>()
+        });
+    }
 
-            Nav.NavigateTo("/products");
+    void RemoveSource(VariantSource s)
+    {
+        sources.Remove(s);
+    }
+
+    void AddVariant(VariantSource s)
+    {
+        s.Variants.Add(new ProductVariant());
+    }
+
+    void RemoveVariant(VariantSource s, ProductVariant v)
+    {
+        s.Variants.Remove(v);
+    }
+
+    private async Task SaveAll()
+    {
+        // 1. 親商品を保存
+        var result = await Supabase.Client
+            .From<Product>()
+            .Insert(product);
+
+        product = result.Models.First();
+
+        // 2. 子商品を保存
+        foreach (var s in sources)
+        {
+            s.ProductId = product.Id;
+
+            var sResult = await Supabase.Client
+                .From<VariantSource>()
+                .Insert(s);
+
+            var savedSource = sResult.Models.First();
+
+            // 3. 封入品を保存
+            foreach (var v in s.Variants)
+            {
+                v.ProductId = product.Id;
+                v.SourceId = savedSource.Id;
+
+                await Supabase.Client
+                    .From<ProductVariant>()
+                    .Insert(v);
+            }
         }
+
+        Nav.NavigateTo("/products");
     }
 }
