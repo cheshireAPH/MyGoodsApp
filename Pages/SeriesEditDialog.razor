@@ -1,0 +1,70 @@
+﻿@namespace MyGoodsApp.Pages
+@using MudBlazor
+@inject SupabaseClientService Supabase
+@inject IDialogService Dialog
+
+<MudDialog>
+    <DialogContent>
+
+        <MudTextField @bind-Value="Series.Name"
+                      Label="作品名"
+                      Required="true"
+                      RequiredError="作品名は必須です" />
+
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Save">
+            保存
+        </MudButton>
+
+        <MudButton Color="Color.Secondary"
+                   Variant="Variant.Text"
+                   OnClick="Cancel">
+            キャンセル
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public MyGoodsApp.Models.Series? Series { get; set; }
+    [CascadingParameter] public IDialogReference? DialogReference { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        Series ??= new MyGoodsApp.Models.Series();
+    }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(Series?.Name))
+            return;
+
+        try
+        {
+            if (Series.Id == 0)
+                await Supabase.Client.From<MyGoodsApp.Models.Series>().Insert(Series);
+            else
+                await Supabase.Client.From<MyGoodsApp.Models.Series>().Update(Series);
+
+            DialogReference?.Close(DialogResult.Ok(true));
+        }
+        catch (Supabase.Postgrest.Exceptions.PostgrestException ex)
+        {
+            if (ex.Message.Contains("duplicate key"))
+            {
+                await Dialog.ShowMessageBoxAsync("エラー", "同じ作品名が既に登録されています。");
+                return;
+            }
+
+            await Dialog.ShowMessageBoxAsync("エラー", ex.Message);
+        }
+    }
+
+    private void Cancel()
+    {
+        DialogReference?.Close(DialogResult.Cancel());
+    }
+}

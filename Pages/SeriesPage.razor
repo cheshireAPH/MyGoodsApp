@@ -1,0 +1,118 @@
+﻿@page "/series-page"
+@using static Supabase.Postgrest.Constants
+@inject SupabaseClientService Supabase
+@inject IDialogService Dialog
+
+<MudPaper Class="pa-4 mx-auto" MaxWidth="600px" Elevation="4">
+
+    <MudText Typo="Typo.h5" Class="mb-4">作品マスタ管理</MudText>
+
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               OnClick="AddSeriesDialog">
+        ＋ 新規作品追加
+    </MudButton>
+
+    <MudTable T="MyGoodsApp.Models.Series"
+              Items="seriesList"
+              Class="mt-4">
+        <HeaderContent>
+            <MudTh>作品名</MudTh>
+            <MudTh>操作</MudTh>
+        </HeaderContent>
+        
+        <RowTemplate Context="item">
+            <MudTd>@item.Name</MudTd>
+            <MudTd>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Primary"
+                           OnClick="@(() => EditSeriesDialog(item))">
+                    編集
+                </MudButton>
+
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Error"
+                           OnClick="@(() => DeleteSeriesDialog(item))">
+                    削除
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+
+    </MudTable>
+
+</MudPaper>
+
+@code {
+    List<MyGoodsApp.Models.Series> seriesList = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSeries();
+    }
+
+    private async Task LoadSeries()
+    {
+        var result = await Supabase.Client
+            .From<MyGoodsApp.Models.Series>()
+            .Select("*")
+            .Order("name", Ordering.Ascending)
+            .Get();
+
+        seriesList = result.Models;
+    }
+
+    private async Task AddSeriesDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "Series", new Series() }
+        };
+
+        var dialog = await Dialog.ShowAsync<MyGoodsApp.Pages.SeriesEditDialog>(
+            "新規作品追加",
+            parameters
+        );
+
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+            await LoadSeries();
+    }
+
+    private async Task EditSeriesDialog(MyGoodsApp.Models.Series s)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Series"] = s
+        };
+
+        var dialog = await Dialog.ShowAsync<MyGoodsApp.Pages.SeriesEditDialog>(
+            "作品編集",
+            parameters
+        );
+
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+            await LoadSeries();
+    }
+
+    private async Task DeleteSeriesDialog(MyGoodsApp.Models.Series s)
+    {
+        var options = new MessageBoxOptions
+        {
+            Title = "確認",
+            Message = $"{s.Name} を削除しますか？（関連キャラも削除されます）",
+            YesText = "削除",
+            NoText = "キャンセル"
+        };
+
+        bool? confirm = await Dialog.ShowMessageBoxAsync(options);
+
+        if (confirm == true)
+        {
+            await Supabase.Client.From<MyGoodsApp.Models.Series>().Delete(s);
+            await LoadSeries();
+        }
+    }
+}
