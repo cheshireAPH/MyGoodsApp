@@ -1,5 +1,5 @@
-﻿@page "/series-page"
-@using static Supabase.Postgrest.Constants
+﻿@page "/series"
+@inject NavigationManager Nav
 @inject SupabaseClientService Supabase
 @inject IDialogService Dialog
 
@@ -25,6 +25,12 @@
             <MudTd>@item.Name</MudTd>
             <MudTd>
                 <MudButton Variant="Variant.Text"
+                           Color="Color.Info"
+                           OnClick="@(() => Nav.NavigateTo($"/characters/{item.Id}"))">
+                    キャラ一覧
+                </MudButton>
+
+                <MudButton Variant="Variant.Text"
                            Color="Color.Primary"
                            OnClick="@(() => EditSeriesDialog(item))">
                     編集
@@ -35,7 +41,7 @@
                            OnClick="@(() => DeleteSeriesDialog(item))">
                     削除
                 </MudButton>
-            </MudTd>
+　           </MudTd>
         </RowTemplate>
 
     </MudTable>

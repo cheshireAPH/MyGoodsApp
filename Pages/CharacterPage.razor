@@ -1,0 +1,120 @@
+﻿@page "/characters/{SeriesId:int}"
+@inject SupabaseClientService Supabase
+@inject IDialogService Dialog
+@inject NavigationManager Nav
+
+<MudPaper Class="pa-4 mx-auto" MaxWidth="600px" Elevation="4">
+
+    <MudText Typo="Typo.h5" Class="mb-4">キャラ一覧</MudText>
+
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               OnClick="AddCharacterDialog">
+        ＋ 新規キャラ追加
+    </MudButton>
+
+    <MudTable T="Character" Items="characterList" Class="mt-4">
+        <HeaderContent>
+            <MudTh>キャラ名</MudTh>
+            <MudTh>操作</MudTh>
+        </HeaderContent>
+
+        <RowTemplate Context="item">
+            <MudTd>@item.Name</MudTd>
+            <MudTd>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Primary"
+                           OnClick="@(() => EditCharacterDialog(item))">
+                    編集
+                </MudButton>
+
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Error"
+                           OnClick="@(() => DeleteCharacter(item))">
+                    削除
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+
+    <MudButton Variant="Variant.Text"
+               Color="Color.Secondary"
+               Class="mt-4"
+               OnClick="@(() => Nav.NavigateTo("/series"))">
+        ← 作品一覧へ戻る
+    </MudButton>
+
+</MudPaper>
+
+@code {
+    [Parameter] public int SeriesId { get; set; }
+
+    List<Character> characterList = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCharacters();
+    }
+
+    private async Task LoadCharacters()
+    {
+        var result = await Supabase.Client
+            .From<Character>()
+            .Select("*")
+            .Filter("series_id", Operator.Equals, SeriesId)
+            .Order("name", Ordering.Ascending)
+            .Get();
+
+        characterList = result.Models;
+    }
+
+    private async Task AddCharacterDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "Character", new Character { SeriesId = SeriesId } }
+        };
+
+        var dialog = await Dialog.ShowAsync<CharacterEditDialog>(
+            "新規キャラ追加",
+            parameters
+        );
+
+        var result = await dialog.Result;
+        if (!result.Canceled)
+            await LoadCharacters();
+    }
+
+    private async Task EditCharacterDialog(Character c)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Character", c }
+        };
+
+        var dialog = await Dialog.ShowAsync<CharacterEditDialog>(
+            "キャラ編集",
+            parameters
+        );
+
+        var result = await dialog.Result;
+        if (!result.Canceled)
+            await LoadCharacters();
+    }
+
+    private async Task DeleteCharacter(Character c)
+    {
+        bool? confirm = await Dialog.ShowMessageBoxAsync(
+            "確認",
+            $"{c.Name} を削除しますか？",
+            yesText: "削除",
+            cancelText: "キャンセル"
+        );
+
+        if (confirm == true)
+        {
+            await Supabase.Client.From<Character>().Delete(c);
+            await LoadCharacters();
+        }
+    }
+}

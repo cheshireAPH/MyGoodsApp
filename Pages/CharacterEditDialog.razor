@@ -1,0 +1,55 @@
+﻿@inject SupabaseClientService Supabase
+@inject IDialogService Dialog
+
+<MudDialog>
+    <DialogContent>
+
+        <MudTextField @bind-Value="Character.Name"
+                      Label="キャラ名"
+                      Required="true"
+                      RequiredError="キャラ名は必須です" />
+
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Save">
+            保存
+        </MudButton>
+
+        <MudButton Color="Color.Secondary"
+                   Variant="Variant.Text"
+                   OnClick="Cancel">
+            キャンセル
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public Character? Character { get; set; }
+    [CascadingParameter] public IDialogReference? DialogReference { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        Character ??= new Character();
+    }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(Character?.Name))
+            return;
+
+        if (Character.Id == 0)
+            await Supabase.Client.From<Character>().Insert(Character);
+        else
+            await Supabase.Client.From<Character>().Update(Character);
+
+        DialogReference?.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel()
+    {
+        DialogReference?.Close(DialogResult.Cancel());
+    }
+}
