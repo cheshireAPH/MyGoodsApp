@@ -13,6 +13,9 @@ public class VariantSource : BaseModel
     [Column("name")]
     public string? Name { get; set; }
 
+    [Column("order_index")]
+    public int OrderIndex { get; set; }
+
     [Column("url")]
     public string? Url { get; set; }
 
