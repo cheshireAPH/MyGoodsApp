@@ -1,4 +1,5 @@
-﻿using Supabase.Postgrest.Attributes;
+﻿using MudBlazor.Utilities;
+using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
 namespace MyGoodsApp.Models;
@@ -11,6 +12,9 @@ public class Character : BaseModel
 
     [Column("name")]
     public string Name { get; set; } = string.Empty;
+
+    [Column("color")]
+    public MudColor Color { get; set; } = new("#ffffff");
 
     [Column("series_id")]
     public int SeriesId { get; set; }

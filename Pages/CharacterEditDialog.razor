@@ -9,6 +9,11 @@
                       Required="true"
                       RequiredError="キャラ名は必須です" />
 
+        <MudColorPicker Value="@Character.Color"
+                        ValueChanged="@((MudColor c) => Character.Color = c)"
+                        Label="キャラカラー"
+                        DisableAlpha="true" />
+
     </DialogContent>
 
     <DialogActions>
@@ -51,5 +56,10 @@
     private void Cancel()
     {
         DialogReference?.Close(DialogResult.Cancel());
+    }
+
+    private void OnColorChanged(string value)
+    {
+        Character.Color = value;
     }
 }
