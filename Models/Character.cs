@@ -14,7 +14,7 @@ public class Character : BaseModel
     public string Name { get; set; } = string.Empty;
 
     [Column("color")]
-    public MudColor Color { get; set; } = new("#ffffff");
+    public string? Color { get; set; }
 
     [Column("series_id")]
     public int SeriesId { get; set; }

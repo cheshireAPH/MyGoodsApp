@@ -13,8 +13,7 @@ public class ProductVariant : BaseModel
     [Column("source_id")]
     public Guid SourceId { get; set; }
 
-    [Column("caracter")]
-    public string? Caracter { get; set; }
+    public HashSet<int> CharacterIds { get; set; } = new();
 
     [Column("name")]
     public string? Name { get; set; }

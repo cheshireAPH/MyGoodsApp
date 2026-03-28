@@ -9,8 +9,8 @@
                       Required="true"
                       RequiredError="キャラ名は必須です" />
 
-        <MudColorPicker Value="@Character.Color"
-                        ValueChanged="@((MudColor c) => Character.Color = c)"
+        <MudColorPicker Value="CharacterColor"
+                        ValueChanged="@(c => CharacterColor = c)"
                         Label="キャラカラー"
                         DisableAlpha="true" />
 
@@ -34,6 +34,11 @@
 @code {
     [Parameter] public Character? Character { get; set; }
     [CascadingParameter] public IDialogReference? DialogReference { get; set; }
+    private MudColor CharacterColor
+    {
+        get => new MudColor(Character.Color ?? "#FFFFFF");
+        set => Character.Color = value.ToString(MudColorOutputFormats.Hex);
+    }
 
     protected override void OnParametersSet()
     {

@@ -8,7 +8,14 @@
 
     <!-- 親商品 -->
     <MudTextField @bind-Value="product.Title" Label="商品名" Required="true" />
-    <MudTextField @bind-Value="product.Series" Label="作品名（未入力なら未分類）" />
+    <MudAutocomplete T="Series"
+                     Label="作品名"
+                     Value="SelectedSeries"
+                     ValueChanged="OnSeriesChanged"
+                     ToStringFunc="s => s?.Name"
+                     SearchFunc="SearchSeries"
+                     Clearable="true"
+                     Dense="true" />
     <MudTextField @bind-Value="product.Category" Label="カテゴリ" />
 
     <MudDivider Class="my-4" />
@@ -45,7 +52,23 @@
                                                 <MudTextField @bind-Value="v.Name" Label="名前" />
                                             </MudItem>
                                             <MudItem xs="4">
-                                                <MudTextField @bind-Value="v.Caracter" Label="キャラ名" />
+                                                <MudSelect T="int"
+                                                           Label="キャラ名"
+                                                           SelectedValues="v.CharacterIds"
+                                                           SelectedValuesChanged="@(ids => v.CharacterIds = ids.ToHashSet())"
+                                                           MultiSelection="true"
+                                                           Dense="true">
+
+                                                    @foreach (var c in CharacterCandidates)
+                                                    {
+                                                        <MudSelectItem Value="@c.Id">@c.Name</MudSelectItem>
+                                                    }
+
+                                                    <!-- 自由入力欄 -->
+                                                    <MudTextField @bind-Value="NewCharacterName"
+                                                                  Placeholder="新規キャラ名を追加"
+                                                                  OnBlur="@(() => AddNewCharacter(v))" />
+                                                </MudSelect>
                                             </MudItem>
                                             <MudItem xs="2">
                                                 <MudNumericField @bind-Value="v.OrderIndex" Label="順番" />
@@ -107,17 +130,32 @@
 @code {
     Product product = new();
     List<VariantSource> sources = new();
+    Series? SelectedSeries;
+    List<Series> AllSeries = new();
+    List<Character> CharacterCandidates = new();
+    string NewCharacterName = "";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        // 既存処理
         sources.Add(new VariantSource
         {
             Variants = new List<ProductVariant>()
-            {
-                new ProductVariant()
-            }
+        {
+            new ProductVariant()
+        }
         });
+
+        // 作品一覧ロード
+        var seriesResult = await Supabase.Client
+            .From<Series>()
+            .Select("*")
+            .Order(x => x.Name, Ordering.Ascending)
+            .Get();
+
+        AllSeries = seriesResult.Models;
     }
+
 
     void AddSource()
     {
@@ -159,6 +197,36 @@
             source.Variants[i].OrderIndex = i;
     }
 
+    private Task<IEnumerable<Series>> SearchSeries(string value, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Task.FromResult(AllSeries.AsEnumerable());
+
+        return Task.FromResult(
+            AllSeries.Where(s => s.Name.Contains(value, StringComparison.OrdinalIgnoreCase))
+        );
+    }
+
+    private async Task OnSeriesChanged(Series value)
+    {
+        SelectedSeries = value;
+
+        if (SelectedSeries == null)
+        {
+            CharacterCandidates = new();
+            return;
+        }
+
+        var result = await Supabase.Client
+            .From<Character>()
+            .Select("*")
+            .Filter(x => x.SeriesId, Operator.Equals, SelectedSeries.Id)
+            .Order(x => x.Name, Ordering.Ascending)
+            .Get();
+
+        CharacterCandidates = result.Models;
+    }
+
     private async Task SaveAll()
     {
         var result = await Supabase.Client.From<Product>().Insert(product);
@@ -176,10 +244,46 @@
                 v.ProductId = product.Id;
                 v.SourceId = savedSource.Id;
 
-                await Supabase.Client.From<ProductVariant>().Insert(v);
+                var vResult = await Supabase.Client.From<ProductVariant>().Insert(v);
+                var savedVariant = vResult.Models.First();
+
+                // ★ 中間テーブルに保存
+                foreach (var charId in v.CharacterIds)
+                {
+                    await Supabase.Client.From<ProductVariantCharacter>().Insert(
+                        new ProductVariantCharacter
+                        {
+                            ProductVariantId = savedVariant.Id,
+                            CharacterId = charId
+                        }
+                    );
+                }
             }
         }
 
         Nav.NavigateTo("/products");
     }
+
+    private async Task AddNewCharacter(ProductVariant v)
+    {
+        if (string.IsNullOrWhiteSpace(NewCharacterName) || SelectedSeries == null)
+            return;
+
+        var newChar = new Character
+        {
+            Name = NewCharacterName,
+            SeriesId = SelectedSeries.Id
+        };
+
+        var result = await Supabase.Client.From<Character>().Insert(newChar);
+        var saved = result.Models.First();
+
+        CharacterCandidates.Add(saved);
+
+        // ★ ID を追加
+        v.CharacterIds.Add(saved.Id);
+
+        NewCharacterName = "";
+    }
+
 }
