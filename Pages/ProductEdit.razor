@@ -250,6 +250,8 @@
                     .Select(x => x.CharacterId)
                     .ToHashSet();
 
+                vvm.Id = v.Id;
+
                 vm.Variants.Add(vvm);
             }
 
@@ -332,42 +334,136 @@
     // ------------------------------
     private async Task SaveAll()
     {
-        // 親商品を保存
-        var result = await Supabase.Client.From<Product>().Insert(product);
-        product = result.Models.First();
+        // ------------------------------
+        // 1. 親商品 Insert/Update
+        // ------------------------------
+        if (product.Id == Guid.Empty)
+        {
+            var result = await Supabase.Client.From<Product>().Insert(product);
+            product = result.Models.First();
+        }
+        else
+        {
+            await Supabase.Client.From<Product>().Update(product);
+        }
 
-        // sources は VariantSourceViewModel のリストになっている前提
+        // ------------------------------
+        // 2. 既存の子商品を取得（削除判定用）
+        // ------------------------------
+        var existingSources = await Supabase.Client
+            .From<VariantSource>()
+            .Where(x => x.ProductId == product.Id)
+            .Get();
+
+        var existingSourceIds = existingSources.Models.Select(x => x.Id).ToHashSet();
+
+        var currentSourceIds = sources
+            .Where(s => s.Source.Id != Guid.Empty)
+            .Select(s => s.Source.Id)
+            .ToHashSet();
+
+        // 削除された Source を DB から削除
+        var deletedSourceIds = existingSourceIds.Except(currentSourceIds);
+        foreach (var delId in deletedSourceIds)
+        {
+            await Supabase.Client
+                .From<VariantSource>()
+                .Where(x => x.Id == delId)
+                .Delete();
+        }
+
+        // ------------------------------
+        // 3. 子商品 Insert/Update
+        // ------------------------------
         foreach (var vm in sources)
         {
-            // 1. VariantSource（DB モデル）を作成
-            var insertSource = new VariantSource
+            VariantSource savedSource;
+
+            if (vm.Source.Id == Guid.Empty)
             {
-                ProductId = product.Id,
-                Name = vm.Source.Name,
-                Url = vm.Source.Url,
-                OrderIndex = vm.Source.OrderIndex,
-                Barcode = vm.Source.Barcode
-            };
+                // Insert
+                vm.Source.ProductId = product.Id;
+                var sResult = await Supabase.Client.From<VariantSource>().Insert(vm.Source);
+                savedSource = sResult.Models.First();
+                vm.Source.Id = savedSource.Id;
+            }
+            else
+            {
+                // Update
+                await Supabase.Client.From<VariantSource>().Update(vm.Source);
+                savedSource = vm.Source;
+            }
 
-            // 2. Supabase に保存
-            var sResult = await Supabase.Client.From<VariantSource>().Insert(insertSource);
-            var savedSource = sResult.Models.First();
+            // ------------------------------
+            // 4. 既存の Variant を取得（削除判定用）
+            // ------------------------------
+            var existingVariants = await Supabase.Client
+                .From<ProductVariant>()
+                .Where(x => x.SourceId == savedSource.Id)
+                .Get();
 
-            // 3. 封入品（ProductVariant）
+            var existingVariantIds = existingVariants.Models.Select(x => x.Id).ToHashSet();
+            var currentVariantIds = vm.Variants
+                .Where(v => v.Id.HasValue)
+                .Select(v => v.Id!.Value)
+                .ToHashSet();
+
+            // 削除された Variant を DB から削除
+            var deletedVariantIds = existingVariantIds.Except(currentVariantIds);
+            foreach (var delId in deletedVariantIds)
+            {
+                await Supabase.Client
+                    .From<ProductVariant>()
+                    .Where(x => x.Id == delId)
+                    .Delete();
+            }
+
+            // ------------------------------
+            // 5. Variant Insert/Update
+            // ------------------------------
             foreach (var v in vm.Variants)
             {
-                var insertVariant = new ProductVariant
+                ProductVariant savedVariant;
+
+                if (!v.Id.HasValue)
                 {
-                    ProductId = product.Id,
-                    SourceId = savedSource.Id,
-                    Name = v.Name,
-                    OrderIndex = v.OrderIndex
-                };
+                    // Insert
+                    var insertVariant = new ProductVariant
+                    {
+                        ProductId = product.Id,
+                        SourceId = savedSource.Id,
+                        Name = v.Name,
+                        OrderIndex = v.OrderIndex
+                    };
 
-                var vResult = await Supabase.Client.From<ProductVariant>().Insert(insertVariant);
-                var savedVariant = vResult.Models.First();
+                    var vResult = await Supabase.Client.From<ProductVariant>().Insert(insertVariant);
+                    savedVariant = vResult.Models.First();
+                    v.Id = savedVariant.Id;
+                }
+                else
+                {
+                    // Update
+                    var updateVariant = new ProductVariant
+                    {
+                        Id = v.Id.Value,
+                        ProductId = product.Id,
+                        SourceId = savedSource.Id,
+                        Name = v.Name,
+                        OrderIndex = v.OrderIndex
+                    };
 
-                // 4. キャラ紐付け
+                    await Supabase.Client.From<ProductVariant>().Update(updateVariant);
+                    savedVariant = updateVariant;
+                }
+
+                // ------------------------------
+                // 6. キャラ紐付けは一度全部削除して再 Insert
+                // ------------------------------
+                await Supabase.Client
+                    .From<ProductVariantCharacter>()
+                    .Where(x => x.ProductVariantId == savedVariant.Id)
+                    .Delete();
+
                 foreach (var charId in v.CharacterIds)
                 {
                     await Supabase.Client.From<ProductVariantCharacter>().Insert(

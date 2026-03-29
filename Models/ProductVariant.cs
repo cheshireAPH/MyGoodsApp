@@ -28,6 +28,7 @@ public class ProductVariant : BaseModel
 
 public class ProductVariantViewModel
 {
+    public Guid? Id { get; set; }
     public string? Name { get; set; }
     public int OrderIndex { get; set; }
     public HashSet<int> CharacterIds { get; set; } = new();
