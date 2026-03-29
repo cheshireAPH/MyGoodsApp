@@ -25,43 +25,58 @@
 
     <MudDivider Class="my-4" />
 
-    @if (DisplayItems == null)
+    @if (VariantItems == null)
     {
         <p>読み込み中...</p>
     }
     else
     {
-        @foreach (var group in DisplayItems.GroupBy(x => x.Category))
-        {
-            <MudText Typo="Typo.h6" Class="mt-4 mb-2">@group.Key</MudText>
+        <MudDataGrid Items="VariantItems" Hover="true" Dense="true">
 
-            <MudList T="DisplayItem" Dense="true">
-                @foreach (var item in group)
-                {
-                    <MudListItem OnClick="@(() => Nav.NavigateTo($"products/edit/{item.ProductId}"))">
-                        @item.DisplayName
-                    </MudListItem>
-                }
-            </MudList>
-        }
+            <Columns>
+
+                <PropertyColumn T="VariantListItem" TProperty="string"
+                                Property="@(x => x.DisplayName)"
+                                Title="商品名 + 排出品名">
+
+                    <CellTemplate>
+                        <MudText Class="cursor-pointer"
+                                 OnClick="@(() => Nav.NavigateTo($"products/edit/{context.Item.ProductId}"))">
+                            @context.Item.DisplayName
+                        </MudText>
+                    </CellTemplate>
+
+                </PropertyColumn>
+
+            </Columns>
+
+            <GroupTemplate Context="group">
+                <MudText Typo="Typo.subtitle1" Class="mt-2 mb-1">
+                    @group.Grouping.Key
+                </MudText>
+            </GroupTemplate>
+
+        </MudDataGrid>
     }
 
 </MudPaper>
 
 @code {
+    // ------------------------------
+    // 状態
+    // ------------------------------
     List<Series> AllSeries = new();
     int? SelectedSeriesId;
 
-    List<Product> ProductsList = new();
-    List<VariantSource> Sources = new();
+    List<VariantListItem>? VariantItems;
 
-    List<DisplayItem>? DisplayItems;
-
+    // ------------------------------
+    // 初期化
+    // ------------------------------
     protected override async Task OnInitializedAsync()
     {
         await LoadSeries();
-        await LoadProductsAndSources();
-        BuildDisplayItems();
+        await LoadVariantList();
     }
 
     private async Task LoadSeries()
@@ -74,44 +89,57 @@
         AllSeries = seriesResult.Models;
     }
 
-    private async Task LoadProductsAndSources()
+    // ------------------------------
+    // 排出品中心の一覧データ取得
+    // ------------------------------
+    private async Task LoadVariantList()
     {
-        var productTable = Supabase.Client.From<Product>();
+        // 1. 親商品
+        var productQuery = Supabase.Client.From<Product>();
 
         var productResult = SelectedSeriesId.HasValue
-            ? await productTable.Filter("series_id", Operator.Equals, SelectedSeriesId.Value).Get()
-            : await productTable.Get();
+            ? await productQuery.Filter("series_id", Operator.Equals, SelectedSeriesId.Value).Get()
+            : await productQuery.Get();
 
-        ProductsList = productResult.Models;
+        var products = productResult.Models;
 
-        if (ProductsList.Count == 0)
+        if (products.Count == 0)
         {
-            Sources = new();
+            VariantItems = new();
             return;
         }
 
+        // 2. 子商品（VariantSource）
         var sourceResult = await Supabase.Client
             .From<VariantSource>()
-            .Filter("product_id", Operator.In, ProductsList.Select(p => p.Id).ToArray())
+            .Filter("product_id", Operator.In, products.Select(p => p.Id).ToArray())
+            .Get();
+
+        var sources = sourceResult.Models;
+
+        // 3. 排出品（ProductVariant）
+        var variantResult = await Supabase.Client
+            .From<ProductVariant>()
+            .Filter("product_id", Operator.In, products.Select(p => p.Id).ToArray())
             .Order(x => x.OrderIndex, Ordering.Ascending)
             .Get();
 
-        Sources = sourceResult.Models;
-    }
+        var variants = variantResult.Models;
 
-    private void BuildDisplayItems()
-    {
-        DisplayItems =
-            (from p in ProductsList
-             join s in Sources on p.Id equals s.ProductId into ps
-             from s in ps.DefaultIfEmpty()
-             select new DisplayItem
+        // 4. 一覧用 ViewModel に変換
+        VariantItems =
+            (from v in variants
+             join s in sources on v.SourceId equals s.Id into vs
+             from s in vs.DefaultIfEmpty()
+             join p in products on v.ProductId equals p.Id
+             select new VariantListItem
              {
                  ProductId = p.Id,
-                 ParentName = p.Title,
-                 ChildName = s?.Name,
-                 Category = p.Category,
-                 DisplayName = s == null ? p.Title : $"{p.Title} {s.Name}"
+                 ProductTitle = p.Title,
+                 VariantName = v.Name,
+                 DisplayName = string.IsNullOrWhiteSpace(v.Name)
+                     ? p.Title
+                     : $"{p.Title} - {v.Name}"
              })
             .OrderBy(x => x.DisplayName)
             .ToList();
@@ -120,16 +148,17 @@
     private async Task OnSeriesChanged(int? value)
     {
         SelectedSeriesId = value;
-        await LoadProductsAndSources();
-        BuildDisplayItems();
+        await LoadVariantList();
     }
 
-    public class DisplayItem
+    // ------------------------------
+    // 一覧用 ViewModel
+    // ------------------------------
+    public class VariantListItem
     {
         public Guid ProductId { get; set; }
-        public string ParentName { get; set; } = "";
-        public string? ChildName { get; set; }
-        public string Category { get; set; } = "";
+        public string ProductTitle { get; set; } = "";
+        public string? VariantName { get; set; }
         public string DisplayName { get; set; } = "";
     }
 }
