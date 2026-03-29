@@ -37,7 +37,7 @@
                 <MudPaper Class="pa-4 mb-4 d-flex" Style="border-left:4px solid #90caf9;">
                     <div style="flex:1">
 
-                        <MudTextField @bind-Value="s.Source.Name" Label="パック名" Required="true" />
+                        <MudTextField @bind-Value="s.Source.Name" Label="パック名" />
                         <MudTextField @bind-Value="s.Source.Url" Label="URL" />
 
                         <MudDivider Class="my-2" />
@@ -59,12 +59,12 @@
                                             </MudItem>
 
                                             <MudItem xs="12" sm="4">
-                                                <MudSelect　Class ="w-100" T="int"
-                                                               Label="キャラ名"
-                                                               SelectedValues="v.CharacterIds"
-                                                               SelectedValuesChanged="@(ids => v.CharacterIds = ids.ToHashSet())"
-                                                               MultiSelection="true"
-                                                               Dense="true">
+                                                <MudSelect T="int"
+                                                           SelectedValues="v.CharacterIds"
+                                                           SelectedValuesChanged="@(ids => v.CharacterIds = ids.ToHashSet())"
+                                                           MultiSelection="true"
+                                                           Dense="true"
+                                                           ToStringFunc="id => CharacterCandidates.FirstOrDefault(c => c.Id == id)?.Name ?? id.ToString()">
 
                                                     @foreach (var c in CharacterCandidates)
                                                     {
@@ -133,6 +133,10 @@
                Color="Color.Primary"
                OnClick="SaveAll">
         @(IsEditMode ? "変更を保存" : "すべて保存する")
+    </MudButton>
+
+    <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="@(() => Nav.NavigateTo("products"))">
+        ← 戻る
     </MudButton>
 
 </MudPaper>
