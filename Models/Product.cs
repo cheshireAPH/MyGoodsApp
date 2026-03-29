@@ -12,8 +12,8 @@ public class Product : BaseModel
     [Column("title")]
     public string Title { get; set; } = string.Empty;
 
-    [Column("series")]
-    public string Series { get; set; } = string.Empty;
+    [Column("series_id")]
+    public int SeriesId { get; set; }
 
     [Column("category")]
     public string Category { get; set; } = string.Empty;

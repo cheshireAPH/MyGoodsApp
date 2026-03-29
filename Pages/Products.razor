@@ -1,34 +1,133 @@
 ﻿@page "/"
 @page "/products"
 @inject SupabaseClientService Supabase
+@inject NavigationManager Nav
 
-<h3>商品一覧</h3>
+<MudPaper Class="pa-4 mx-auto" MaxWidth="900px">
 
-@if (products == null)
-{
-    <p>読み込み中...</p>
-}
-else
-{
-    <ul>
-        @foreach (var p in products)
+    <MudText Typo="Typo.h5" Class="mb-4">商品一覧</MudText>
+
+    <!-- 作品一覧（タップで絞り込み） -->
+    <MudChipSet T="int?"
+                Mandatory="false"
+                SelectedChip="@SelectedSeriesId"
+                SelectedChipChanged="OnSeriesChipChanged">
+
+        <MudChip Value="@((int?)null)">すべて</MudChip>
+
+        @foreach (var s in AllSeries)
         {
-            <li>
-                <a href="products/edit/@p.Id">@p.Title (@p.Series)</a>
-            </li>
+            <MudChip Value="@s.Id">@s.Name</MudChip>
         }
-    </ul>
-}
+    </MudChipSet>
+
+    <MudDivider Class="my-4" />
+
+    @if (DisplayItems == null)
+    {
+        <p>読み込み中...</p>
+    }
+    else
+    {
+        @foreach (var group in DisplayItems.GroupBy(x => x.Category))
+        {
+            <MudText Typo="Typo.h6" Class="mt-4 mb-2">@group.Key</MudText>
+
+            <MudList T="DisplayItem" Dense="true">
+                @foreach (var item in group)
+                {
+                    <MudListItem OnClick="@(() => Nav.NavigateTo($"products/edit/{item.ProductId}"))">
+                        @item.DisplayName
+                    </MudListItem>
+                }
+            </MudList>
+        }
+    }
+
+</MudPaper>
 
 @code {
-    List<Product>? products;
+    List<Series> AllSeries = new();
+    int? SelectedSeriesId;
+
+    List<Product> ProductsList = new();
+    List<VariantSource> Sources = new();
+
+    List<DisplayItem>? DisplayItems;
 
     protected override async Task OnInitializedAsync()
     {
-        var result = await Supabase.Client
-            .From<Product>()
+        await LoadSeries();
+        await LoadProductsAndSources();
+        BuildDisplayItems();
+    }
+
+    private async Task LoadSeries()
+    {
+        var seriesResult = await Supabase.Client
+            .From<Series>()
+            .Order(x => x.Name, Ordering.Ascending)
             .Get();
 
-        products = result.Models;
+        AllSeries = seriesResult.Models;
+    }
+
+    private async Task LoadProductsAndSources()
+    {
+        var productTable = Supabase.Client.From<Product>();
+
+        var productResult = SelectedSeriesId.HasValue
+            ? await productTable.Filter("series_id", Operator.Equals, SelectedSeriesId.Value).Get()
+            : await productTable.Get();
+
+        ProductsList = productResult.Models;
+
+        if (ProductsList.Count == 0)
+        {
+            Sources = new();
+            return;
+        }
+
+        var sourceResult = await Supabase.Client
+            .From<VariantSource>()
+            .Filter("product_id", Operator.In, ProductsList.Select(p => p.Id).ToArray())
+            .Order(x => x.OrderIndex, Ordering.Ascending)
+            .Get();
+
+        Sources = sourceResult.Models;
+    }
+
+    private void BuildDisplayItems()
+    {
+        DisplayItems =
+            (from p in ProductsList
+             join s in Sources on p.Id equals s.ProductId into ps
+             from s in ps.DefaultIfEmpty()
+             select new DisplayItem
+             {
+                 ProductId = p.Id,
+                 ParentName = p.Title,
+                 ChildName = s?.Name,
+                 Category = p.Category,
+                 DisplayName = s == null ? p.Title : $"{p.Title} {s.Name}"
+             })
+            .OrderBy(x => x.DisplayName)
+            .ToList();
+    }
+
+    private async Task OnSeriesChipChanged(object value)
+    {
+        SelectedSeriesId = value as int?;
+        await LoadProductsAndSources();
+        BuildDisplayItems();
+    }
+
+    public class DisplayItem
+    {
+        public Guid ProductId { get; set; }
+        public string ParentName { get; set; } = "";
+        public string? ChildName { get; set; }
+        public string Category { get; set; } = "";
+        public string DisplayName { get; set; } = "";
     }
 }

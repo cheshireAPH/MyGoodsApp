@@ -163,6 +163,20 @@
                 .Where(x => x.Id == Id.Value)
                 .Single();
 
+            SelectedSeries = AllSeries.FirstOrDefault(s => s.Id == product.SeriesId);
+
+            if (SelectedSeries != null)
+            {
+                var result = await Supabase.Client
+                    .From<Character>()
+                    .Select("*")
+                    .Filter(x => x.SeriesId, Operator.Equals, SelectedSeries.Id)
+                    .Order(x => x.Name, Ordering.Ascending)
+                    .Get();
+
+                CharacterCandidates = result.Models;
+            }
+
             sources = await LoadSources(product.Id);
         }
         else
@@ -281,6 +295,8 @@
             CharacterCandidates = new();
             return;
         }
+
+        product.SeriesId = SelectedSeries.Id;
 
         var result = await Supabase.Client
             .From<Character>()
