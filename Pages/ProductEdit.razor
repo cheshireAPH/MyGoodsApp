@@ -1,13 +1,17 @@
 ﻿@page "/products/new"
+@page "/products/edit/{id:guid}"
 @inject SupabaseClientService Supabase
 @inject NavigationManager Nav
 
 <MudPaper Class="pa-4 mx-auto" MaxWidth="900px" Elevation="4">
 
-    <MudText Typo="Typo.h5" Class="mb-4">新規商品追加</MudText>
+    <MudText Typo="Typo.h5" Class="mb-4">
+        @(IsEditMode ? "商品を編集" : "新規商品追加")
+    </MudText>
 
     <!-- 親商品 -->
     <MudTextField @bind-Value="product.Title" Label="商品名" Required="true" />
+
     <MudAutocomplete T="Series"
                      Label="作品名"
                      Value="SelectedSeries"
@@ -16,11 +20,12 @@
                      SearchFunc="SearchSeries"
                      Clearable="true"
                      Dense="true" />
+
     <MudTextField @bind-Value="product.Category" Label="カテゴリ" />
 
     <MudDivider Class="my-4" />
 
-    <!-- 子商品（ドラッグ並び替え可能） -->
+    <!-- 子商品 -->
     <MudDropContainer T="VariantSource"
                       Items="sources"
                       ItemUpdated="OnSourceReordered">
@@ -51,6 +56,7 @@
                                             <MudItem xs="4">
                                                 <MudTextField @bind-Value="v.Name" Label="名前" />
                                             </MudItem>
+
                                             <MudItem xs="4">
                                                 <MudSelect T="int"
                                                            Label="キャラ名"
@@ -64,15 +70,17 @@
                                                         <MudSelectItem Value="@c.Id">@c.Name</MudSelectItem>
                                                     }
 
-                                                    <!-- 自由入力欄 -->
+                                                    <!-- 自由入力 -->
                                                     <MudTextField @bind-Value="NewCharacterName"
                                                                   Placeholder="新規キャラ名を追加"
                                                                   OnBlur="@(() => AddNewCharacter(v))" />
                                                 </MudSelect>
                                             </MudItem>
+
                                             <MudItem xs="2">
                                                 <MudNumericField @bind-Value="v.OrderIndex" Label="順番" />
                                             </MudItem>
+
                                             <MudItem xs="2" Class="d-flex align-center">
                                                 <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                                Color="Color.Error"
@@ -122,12 +130,15 @@
     <MudButton Variant="Variant.Filled"
                Color="Color.Primary"
                OnClick="SaveAll">
-        すべて保存する
+        @(IsEditMode ? "変更を保存" : "すべて保存する")
     </MudButton>
 
 </MudPaper>
 
 @code {
+    // ------------------------------
+    // 状態
+    // ------------------------------
     Product product = new();
     List<VariantSource> sources = new();
     Series? SelectedSeries;
@@ -135,18 +146,36 @@
     List<Character> CharacterCandidates = new();
     string NewCharacterName = "";
 
+    [Parameter] public Guid? Id { get; set; }
+    private bool IsEditMode => Id.HasValue;
+
+    // ------------------------------
+    // 初期化
+    // ------------------------------
     protected override async Task OnInitializedAsync()
     {
-        // 既存処理
-        sources.Add(new VariantSource
+        if (IsEditMode)
         {
-            Variants = new List<ProductVariant>()
-        {
-            new ProductVariant()
-        }
-        });
+            product = await Supabase.Client
+                .From<Product>()
+                .Where(x => x.Id == Id.Value)
+                .Single();
 
-        // 作品一覧ロード
+            sources = await LoadSources(product.Id);
+        }
+        else
+        {
+            product = new Product();
+            sources = new()
+            {
+                new VariantSource
+                {
+                    Variants = new() { new ProductVariant() }
+                }
+            };
+        }
+
+        // 作品一覧
         var seriesResult = await Supabase.Client
             .From<Series>()
             .Select("*")
@@ -156,17 +185,50 @@
         AllSeries = seriesResult.Models;
     }
 
-
-    void AddSource()
+    // ------------------------------
+    // 子商品・封入品の読み込み（編集モード）
+    // ------------------------------
+    private async Task<List<VariantSource>> LoadSources(Guid productId)
     {
-        sources.Add(new VariantSource
+        var sourcesResult = await Supabase.Client
+            .From<VariantSource>()
+            .Where(x => x.ProductId == productId)
+            .Order(x => x.OrderIndex, Ordering.Ascending)
+            .Get();
+
+        var list = sourcesResult.Models;
+
+        foreach (var s in list)
         {
-            Variants = new List<ProductVariant>()
+            var variantsResult = await Supabase.Client
+                .From<ProductVariant>()
+                .Where(x => x.SourceId == s.Id)
+                .Order(x => x.OrderIndex, Ordering.Ascending)
+                .Get();
+
+            s.Variants = variantsResult.Models;
+
+            foreach (var v in s.Variants)
             {
-                new ProductVariant()
+                var charsResult = await Supabase.Client
+                    .From<ProductVariantCharacter>()
+                    .Where(x => x.ProductVariantId == v.Id)
+                    .Get();
+
+                v.CharacterIds = charsResult.Models
+                    .Select(x => x.CharacterId)
+                    .ToHashSet();
             }
-        });
+        }
+
+        return list;
     }
+
+    // ------------------------------
+    // UI 操作
+    // ------------------------------
+    void AddSource() =>
+        sources.Add(new VariantSource { Variants = new() { new ProductVariant() } });
 
     void RemoveSource(VariantSource s)
     {
@@ -174,10 +236,8 @@
             sources.Remove(s);
     }
 
-    void AddVariant(VariantSource s)
-    {
+    void AddVariant(VariantSource s) =>
         s.Variants.Add(new ProductVariant());
-    }
 
     void RemoveVariant(VariantSource s, ProductVariant v)
     {
@@ -191,12 +251,15 @@
             sources[i].OrderIndex = i;
     }
 
-    void OnVariantReordered(VariantSource source, MudItemDropInfo<ProductVariant> info)
+    void OnVariantReordered(VariantSource s, MudItemDropInfo<ProductVariant> info)
     {
-        for (int i = 0; i < source.Variants.Count; i++)
-            source.Variants[i].OrderIndex = i;
+        for (int i = 0; i < s.Variants.Count; i++)
+            s.Variants[i].OrderIndex = i;
     }
 
+    // ------------------------------
+    // 作品 → キャラ一覧
+    // ------------------------------
     private Task<IEnumerable<Series>> SearchSeries(string value, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -227,6 +290,9 @@
         CharacterCandidates = result.Models;
     }
 
+    // ------------------------------
+    // 保存（新規）
+    // ------------------------------
     private async Task SaveAll()
     {
         var result = await Supabase.Client.From<Product>().Insert(product);
@@ -247,7 +313,6 @@
                 var vResult = await Supabase.Client.From<ProductVariant>().Insert(v);
                 var savedVariant = vResult.Models.First();
 
-                // ★ 中間テーブルに保存
                 foreach (var charId in v.CharacterIds)
                 {
                     await Supabase.Client.From<ProductVariantCharacter>().Insert(
@@ -264,6 +329,9 @@
         Nav.NavigateTo("products");
     }
 
+    // ------------------------------
+    // 新規キャラ追加
+    // ------------------------------
     private async Task AddNewCharacter(ProductVariant v)
     {
         if (string.IsNullOrWhiteSpace(NewCharacterName) || SelectedSeries == null)
@@ -279,11 +347,8 @@
         var saved = result.Models.First();
 
         CharacterCandidates.Add(saved);
-
-        // ★ ID を追加
         v.CharacterIds.Add(saved.Id);
 
         NewCharacterName = "";
     }
-
 }
