@@ -53,17 +53,18 @@
                                 {
                                     <MudPaper Class="pa-2 mb-2" Style="border:1px solid #ccc;">
                                         <MudGrid>
-                                            <MudItem xs="4">
+
+                                            <MudItem xs="12" sm="4">
                                                 <MudTextField @bind-Value="v.Name" Label="名前" />
                                             </MudItem>
 
-                                            <MudItem xs="4">
-                                                <MudSelect T="int"
-                                                           Label="キャラ名"
-                                                           SelectedValues="v.CharacterIds"
-                                                           SelectedValuesChanged="@(ids => v.CharacterIds = ids.ToHashSet())"
-                                                           MultiSelection="true"
-                                                           Dense="true">
+                                            <MudItem xs="12" sm="4">
+                                                <MudSelect　Class ="w-100" T="int"
+                                                               Label="キャラ名"
+                                                               SelectedValues="v.CharacterIds"
+                                                               SelectedValuesChanged="@(ids => v.CharacterIds = ids.ToHashSet())"
+                                                               MultiSelection="true"
+                                                               Dense="true">
 
                                                     @foreach (var c in CharacterCandidates)
                                                     {
@@ -72,16 +73,16 @@
 
                                                     <!-- 自由入力 -->
                                                     <MudTextField @bind-Value="NewCharacterName"
-                                                                  Placeholder="新規キャラ名を追加"
-                                                                  OnBlur="@(() => AddNewCharacter(v))" />
-                                                </MudSelect>
+                                                                    Placeholder="新規キャラ名を追加"
+                                                                    OnBlur="@(() => AddNewCharacter(v))" />
+                                                </MudSelect　Class>
                                             </MudItem>
 
-                                            <MudItem xs="2">
+                                            <MudItem xs="6" sm="2">
                                                 <MudNumericField @bind-Value="v.OrderIndex" Label="順番" />
                                             </MudItem>
 
-                                            <MudItem xs="2" Class="d-flex align-center">
+                                            <MudItem xs="6" sm="2" Class="d-flex align-center">
                                                 <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                                Color="Color.Error"
                                                                Disabled="@(s.Variants.Count == 1)"
@@ -95,10 +96,11 @@
 
                         </MudDropContainer>
 
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Secondary"
-                                   Class="mt-2"
-                                   OnClick="@(() => AddVariant(s))">
+                        <MudButton Class="mt-2 ml-auto" 
+                                    Style="display:block;"
+                                    Variant="Variant.Outlined"
+                                    Color="Color.Secondary"
+                                    OnClick="@(() => AddVariant(s))">
                             ＋ 封入品追加
                         </MudButton>
 
