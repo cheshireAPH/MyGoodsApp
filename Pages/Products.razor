@@ -9,15 +9,17 @@
 
     <!-- 作品一覧（タップで絞り込み） -->
     <MudChipSet T="int?"
-                Mandatory="false"
-                SelectedChip="@SelectedSeriesId"
-                SelectedChipChanged="OnSeriesChipChanged">
+                SelectedValue="@SelectedSeriesId"
+                SelectedValueChanged="OnSeriesChanged"
+                Mandatory="false" Color="Color.Primary"
+                SelectedColor="Color.Secondary"
+                Class="mb-4">
 
         <MudChip Value="@((int?)null)">すべて</MudChip>
 
         @foreach (var s in AllSeries)
         {
-            <MudChip Value="@s.Id">@s.Name</MudChip>
+            <MudChip Value="@((int?)s.Id)">@s.Name</MudChip>
         }
     </MudChipSet>
 
@@ -115,9 +117,9 @@
             .ToList();
     }
 
-    private async Task OnSeriesChipChanged(object value)
+    private async Task OnSeriesChanged(int? value)
     {
-        SelectedSeriesId = value as int?;
+        SelectedSeriesId = value;
         await LoadProductsAndSources();
         BuildDisplayItems();
     }
