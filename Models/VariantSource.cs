@@ -21,7 +21,10 @@ public class VariantSource : BaseModel
 
     [Column("barcode")]
     public string? Barcode { get; set; }
+}
 
-    // 画面用：封入品をネストして扱うためのローカルプロパティ
-    public List<ProductVariant> Variants { get; set; } = new();
+public class VariantSourceViewModel
+{
+    public VariantSource Source { get; set; } = new();
+    public List<ProductVariantViewModel> Variants { get; set; } = new();
 }

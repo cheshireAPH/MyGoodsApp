@@ -13,8 +13,6 @@ public class ProductVariant : BaseModel
     [Column("source_id")]
     public Guid SourceId { get; set; }
 
-    public HashSet<int> CharacterIds { get; set; } = new();
-
     [Column("name")]
     public string? Name { get; set; }
 
@@ -26,4 +24,11 @@ public class ProductVariant : BaseModel
 
     [Column("memo")]
     public string? Memo { get; set; }
+}
+
+public class ProductVariantViewModel
+{
+    public string? Name { get; set; }
+    public int OrderIndex { get; set; }
+    public HashSet<int> CharacterIds { get; set; } = new();
 }

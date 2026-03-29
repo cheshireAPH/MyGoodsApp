@@ -26,28 +26,28 @@
     <MudDivider Class="my-4" />
 
     <!-- 子商品 -->
-    <MudDropContainer T="VariantSource"
+    <MudDropContainer T="VariantSourceViewModel"
                       Items="sources"
                       ItemUpdated="OnSourceReordered">
 
-        <MudDropZone T="VariantSource" Items="sources">
+        <MudDropZone T="VariantSourceViewModel" Items="sources">
 
             @foreach (var s in sources)
             {
                 <MudPaper Class="pa-4 mb-4 d-flex" Style="border-left:4px solid #90caf9;">
                     <div style="flex:1">
 
-                        <MudTextField @bind-Value="s.Name" Label="パック名" Required="true" />
-                        <MudTextField @bind-Value="s.Url" Label="URL" />
+                        <MudTextField @bind-Value="s.Source.Name" Label="パック名" Required="true" />
+                        <MudTextField @bind-Value="s.Source.Url" Label="URL" />
 
                         <MudDivider Class="my-2" />
 
                         <!-- 封入品 -->
-                        <MudDropContainer T="ProductVariant"
+                        <MudDropContainer T="ProductVariantViewModel"
                                           Items="s.Variants"
-                                          ItemUpdated="@( (MudItemDropInfo<ProductVariant> info) => OnVariantReordered(s, info) )">
+                                          ItemUpdated="@( (MudItemDropInfo<ProductVariantViewModel> info) => OnVariantReordered(s, info) )">
 
-                            <MudDropZone T="ProductVariant" Items="s.Variants">
+                            <MudDropZone T="ProductVariantViewModel" Items="s.Variants">
 
                                 @foreach (var v in s.Variants)
                                 {
@@ -142,7 +142,7 @@
     // 状態
     // ------------------------------
     Product product = new();
-    List<VariantSource> sources = new();
+    List<VariantSourceViewModel> sources = new();
     Series? SelectedSeries;
     List<Series> AllSeries = new();
     List<Character> CharacterCandidates = new();
@@ -156,6 +156,15 @@
     // ------------------------------
     protected override async Task OnInitializedAsync()
     {
+        // 作品一覧
+        var seriesResult = await Supabase.Client
+            .From<Series>()
+            .Select("*")
+            .Order(x => x.Name, Ordering.Ascending)
+            .Get();
+
+        AllSeries = seriesResult.Models;
+        
         if (IsEditMode)
         {
             product = await Supabase.Client
@@ -184,27 +193,18 @@
             product = new Product();
             sources = new()
             {
-                new VariantSource
+                new VariantSourceViewModel
                 {
-                    Variants = new() { new ProductVariant() }
+                    Variants = new() { new ProductVariantViewModel() }
                 }
             };
         }
-
-        // 作品一覧
-        var seriesResult = await Supabase.Client
-            .From<Series>()
-            .Select("*")
-            .Order(x => x.Name, Ordering.Ascending)
-            .Get();
-
-        AllSeries = seriesResult.Models;
     }
 
     // ------------------------------
     // 子商品・封入品の読み込み（編集モード）
     // ------------------------------
-    private async Task<List<VariantSource>> LoadSources(Guid productId)
+    private async Task<List<VariantSourceViewModel>> LoadSources(Guid productId)
     {
         var sourcesResult = await Supabase.Client
             .From<VariantSource>()
@@ -212,62 +212,77 @@
             .Order(x => x.OrderIndex, Ordering.Ascending)
             .Get();
 
-        var list = sourcesResult.Models;
+        var vmList = new List<VariantSourceViewModel>();
 
-        foreach (var s in list)
+        foreach (var s in sourcesResult.Models)
         {
+            var vm = new VariantSourceViewModel
+            {
+                Source = s
+            };
+
+            // 封入品（ProductVariant）
             var variantsResult = await Supabase.Client
                 .From<ProductVariant>()
                 .Where(x => x.SourceId == s.Id)
                 .Order(x => x.OrderIndex, Ordering.Ascending)
                 .Get();
 
-            s.Variants = variantsResult.Models;
-
-            foreach (var v in s.Variants)
+            foreach (var v in variantsResult.Models)
             {
+                var vvm = new ProductVariantViewModel
+                {
+                    Name = v.Name,
+                    OrderIndex = v.OrderIndex
+                };
+
+                // キャラ紐付け
                 var charsResult = await Supabase.Client
                     .From<ProductVariantCharacter>()
                     .Where(x => x.ProductVariantId == v.Id)
                     .Get();
 
-                v.CharacterIds = charsResult.Models
+                vvm.CharacterIds = charsResult.Models
                     .Select(x => x.CharacterId)
                     .ToHashSet();
+
+                vm.Variants.Add(vvm);
             }
+
+            vmList.Add(vm);
         }
 
-        return list;
+        return vmList;
     }
 
     // ------------------------------
     // UI 操作
     // ------------------------------
     void AddSource() =>
-        sources.Add(new VariantSource { Variants = new() { new ProductVariant() } });
+        sources.Add(new VariantSourceViewModel { Variants = new() { new ProductVariantViewModel() } });
 
-    void RemoveSource(VariantSource s)
+    void RemoveSource(VariantSourceViewModel s)
     {
         if (sources.Count > 1)
             sources.Remove(s);
     }
 
-    void AddVariant(VariantSource s) =>
-        s.Variants.Add(new ProductVariant());
+    void AddVariant(VariantSourceViewModel s) =>
+        s.Variants.Add(new ProductVariantViewModel());
 
-    void RemoveVariant(VariantSource s, ProductVariant v)
+    void RemoveVariant(VariantSourceViewModel s, ProductVariantViewModel v)
     {
         if (s.Variants.Count > 1)
             s.Variants.Remove(v);
     }
 
-    void OnSourceReordered(MudItemDropInfo<VariantSource> info)
+    void OnSourceReordered(MudItemDropInfo<VariantSourceViewModel> info)
     {
         for (int i = 0; i < sources.Count; i++)
-            sources[i].OrderIndex = i;
+            sources[i].Source.OrderIndex = i;
     }
 
-    void OnVariantReordered(VariantSource s, MudItemDropInfo<ProductVariant> info)
+    void OnVariantReordered(VariantSourceViewModel s, MudItemDropInfo<ProductVariantViewModel> info)
     {
         for (int i = 0; i < s.Variants.Count; i++)
             s.Variants[i].OrderIndex = i;
@@ -313,24 +328,42 @@
     // ------------------------------
     private async Task SaveAll()
     {
+        // 親商品を保存
         var result = await Supabase.Client.From<Product>().Insert(product);
         product = result.Models.First();
 
-        foreach (var s in sources)
+        // sources は VariantSourceViewModel のリストになっている前提
+        foreach (var vm in sources)
         {
-            s.ProductId = product.Id;
+            // 1. VariantSource（DB モデル）を作成
+            var insertSource = new VariantSource
+            {
+                ProductId = product.Id,
+                Name = vm.Source.Name,
+                Url = vm.Source.Url,
+                OrderIndex = vm.Source.OrderIndex,
+                Barcode = vm.Source.Barcode
+            };
 
-            var sResult = await Supabase.Client.From<VariantSource>().Insert(s);
+            // 2. Supabase に保存
+            var sResult = await Supabase.Client.From<VariantSource>().Insert(insertSource);
             var savedSource = sResult.Models.First();
 
-            foreach (var v in s.Variants)
+            // 3. 封入品（ProductVariant）
+            foreach (var v in vm.Variants)
             {
-                v.ProductId = product.Id;
-                v.SourceId = savedSource.Id;
+                var insertVariant = new ProductVariant
+                {
+                    ProductId = product.Id,
+                    SourceId = savedSource.Id,
+                    Name = v.Name,
+                    OrderIndex = v.OrderIndex
+                };
 
-                var vResult = await Supabase.Client.From<ProductVariant>().Insert(v);
+                var vResult = await Supabase.Client.From<ProductVariant>().Insert(insertVariant);
                 var savedVariant = vResult.Models.First();
 
+                // 4. キャラ紐付け
                 foreach (var charId in v.CharacterIds)
                 {
                     await Supabase.Client.From<ProductVariantCharacter>().Insert(
@@ -350,7 +383,7 @@
     // ------------------------------
     // 新規キャラ追加
     // ------------------------------
-    private async Task AddNewCharacter(ProductVariant v)
+    private async Task AddNewCharacter(ProductVariantViewModel v)
     {
         if (string.IsNullOrWhiteSpace(NewCharacterName) || SelectedSeries == null)
             return;
