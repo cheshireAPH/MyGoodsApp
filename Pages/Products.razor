@@ -31,35 +31,31 @@
     }
     else
     {
-        <MudDataGrid Items="VariantItems" Hover="true" Dense="true">
+        @foreach (var categoryGroup in VariantItems.GroupBy(x => x.Category))
+        {
+            <MudExpansionPanel Text="@categoryGroup.Key">
 
-            <Columns>
+                @foreach (var productGroup in categoryGroup.GroupBy(x => x.ProductTitle))
+                {
+                    <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
+                             Style="border-left:4px solid #90caf9;padding-left:8px;">
+                        @productGroup.Key
+                    </MudText>
 
-                <PropertyColumn T="VariantListItem" TProperty="string"
-                                Property="@(x => x.DisplayName)"
-                                Title="商品名 + 排出品名">
+                    @foreach (var item in productGroup.OrderBy(x => x.OrderIndex))
+                    {
+                        <MudLink Href="@($"products/edit/{item.ProductId}")" Class="ml-4">
+                            @item.DisplayName
+                        </MudLink>
+                    }
+                }
 
-                    <CellTemplate>
-                        <MudText Class="cursor-pointer"
-                                 OnClick="@(() => Nav.NavigateTo($"products/edit/{context.Item.ProductId}"))">
-                            @context.Item.DisplayName
-                        </MudText>
-                    </CellTemplate>
-
-                </PropertyColumn>
-
-            </Columns>
-
-            <GroupTemplate Context="group">
-                <MudText Typo="Typo.subtitle1" Class="mt-2 mb-1">
-                    @group.Grouping.Key
-                </MudText>
-            </GroupTemplate>
-
-        </MudDataGrid>
+            </MudExpansionPanel>
+        }
     }
 
 </MudPaper>
+
 
 @code {
     // ------------------------------
@@ -136,12 +132,16 @@
              {
                  ProductId = p.Id,
                  ProductTitle = p.Title,
+                 Category = p.Category,
                  VariantName = v.Name,
                  DisplayName = string.IsNullOrWhiteSpace(v.Name)
                      ? p.Title
-                     : $"{p.Title} - {v.Name}"
+                     : $"{p.Title} - {v.Name}",
+                 OrderIndex = v.OrderIndex
              })
-            .OrderBy(x => x.DisplayName)
+            .OrderBy(x => x.Category)
+            .ThenBy(x => x.ProductTitle)
+            .ThenBy(x => x.OrderIndex)
             .ToList();
     }
 
@@ -158,7 +158,9 @@
     {
         public Guid ProductId { get; set; }
         public string ProductTitle { get; set; } = "";
+        public string Category { get; set; } = "";
         public string? VariantName { get; set; }
         public string DisplayName { get; set; } = "";
+        public int OrderIndex { get; set; }
     }
 }

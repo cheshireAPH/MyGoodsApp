@@ -26,42 +26,45 @@
     <MudDivider Class="my-4" />
 
     <!-- 子商品 -->
-    <MudDropContainer T="VariantSourceViewModel"
-                      Items="sources"
-                      ItemUpdated="OnSourceReordered">
+<!-- 外側の DropContainer -->
+<MudDropContainer T="VariantSourceViewModel"
+                  Items="sources"
+                  ItemUpdated="OnSourceReordered">
 
-        <MudDropZone T="VariantSourceViewModel" Items="sources">
+    <MudDropZone T="VariantSourceViewModel" Items="sources">
 
-            @foreach (var s in sources)
-            {
-                <MudPaper Class="pa-4 mb-4 d-flex" Style="border-left:4px solid #90caf9;">
-                    <div style="flex:1">
+        @foreach (var s in sources)
+        {
+            <MudPaper Class="pa-4 mb-4 d-flex" Style="border-left:4px solid #90caf9;">
+                <div style="flex:1">
 
-                        <MudTextField @bind-Value="s.Source.Name" Label="パック名" />
-                        <MudTextField @bind-Value="s.Source.Url" Label="URL" />
+                    <MudTextField @bind-Value="s.Source.Name" Label="パック名" />
+                    <MudTextField @bind-Value="s.Source.Url" Label="URL" />
 
-                        <MudDivider Class="my-2" />
+                    <MudDivider Class="my-2" />
 
-                        <!-- 封入品 -->
+                        <!-- 内側の DropContainer（封入品） -->
                         <MudDropContainer T="ProductVariantViewModel"
                                           Items="s.Variants"
                                           ItemUpdated="@( (MudItemDropInfo<ProductVariantViewModel> info) => OnVariantReordered(s, info) )">
 
                             <MudDropZone T="ProductVariantViewModel" Items="s.Variants">
 
-                                @foreach (var v in s.Variants)
+                                @foreach (var variant in s.Variants)
                                 {
                                     <MudPaper Class="pa-2 mb-2" Style="border:1px solid #ccc;">
                                         <MudGrid>
 
+                                            <!-- 名前 -->
                                             <MudItem xs="12" sm="4">
-                                                <MudTextField @bind-Value="v.Name" Label="名前" />
+                                                <MudTextField @bind-Value="variant.Name" Label="名前" />
                                             </MudItem>
 
+                                            <!-- キャラ選択 -->
                                             <MudItem xs="12" sm="4">
                                                 <MudSelect T="int"
-                                                           SelectedValues="v.CharacterIds"
-                                                           SelectedValuesChanged="@(ids => v.CharacterIds = ids.ToHashSet())"
+                                                           SelectedValues="variant.CharacterIds"
+                                                           SelectedValuesChanged="@(ids => variant.CharacterIds = ids.ToHashSet())"
                                                            MultiSelection="true"
                                                            Dense="true"
                                                            ToStringFunc="id => CharacterCandidates.FirstOrDefault(c => c.Id == id)?.Name ?? id.ToString()">
@@ -70,24 +73,53 @@
                                                     {
                                                         <MudSelectItem Value="@c.Id">@c.Name</MudSelectItem>
                                                     }
+                                                </MudSelect>
 
-                                                    <!-- 自由入力 -->
-                                                    <MudTextField @bind-Value="NewCharacterName"
-                                                                    Placeholder="新規キャラ名を追加"
-                                                                    OnBlur="@(() => AddNewCharacter(v))" />
-                                                </MudSelect　Class>
+                                                <!-- 新規キャラ追加 -->
+                                                <MudTextField @bind-Value="NewCharacterName"
+                                                              Placeholder="新規キャラ名を追加"
+                                                              OnBlur="@(() => AddNewCharacter(variant))" />
                                             </MudItem>
 
+                                            <!-- 順番 -->
                                             <MudItem xs="6" sm="2">
-                                                <MudNumericField @bind-Value="v.OrderIndex" Label="順番" />
+                                                <MudNumericField @bind-Value="variant.OrderIndex" Label="順番" />
                                             </MudItem>
 
+                                            <!-- 削除ボタン -->
                                             <MudItem xs="6" sm="2" Class="d-flex align-center">
                                                 <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                                Color="Color.Error"
                                                                Disabled="@(s.Variants.Count == 1)"
-                                                               OnClick="@(() => RemoveVariant(s, v))" />
+                                                               OnClick="@(() => RemoveVariant(s, variant))" />
                                             </MudItem>
+
+                                            <!-- 所持数 -->
+                                            <MudItem xs="6" sm="2">
+                                                <MudNumericField @bind-Value="variant.Owned" Label="所持数" Min="0" />
+                                            </MudItem>
+
+                                            <!-- 希望数 -->
+                                            <MudItem xs="6" sm="2">
+                                                <MudNumericField @bind-Value="variant.Wanted"
+                                                                 Label="希望数"
+                                                                 Min="0"
+                                                                 Disabled="variant.IsInfinite" />
+                                            </MudItem>
+
+                                            <!-- ∞チェック -->
+                                            <MudItem xs="6" sm="2" Class="d-flex align-center">
+                                                <MudCheckBox T="bool"
+                                                             @bind-Checked="variant.IsInfinite"
+                                                             Label="∞"
+                                                             OnBlur="@(() => OnInfiniteChanged(variant))" />
+                                            </MudItem>
+
+                                            <!-- 余剰 -->
+                                            <MudItem xs="6" sm="2">
+                                                <MudNumericField @bind-Value="variant.Surplus" Label="余剰" Min="0" />
+                                            </MudItem>
+
                                         </MudGrid>
                                     </MudPaper>
                                 }
@@ -96,11 +128,11 @@
 
                         </MudDropContainer>
 
-                        <MudButton Class="mt-2 ml-auto" 
-                                    Style="display:block;"
-                                    Variant="Variant.Outlined"
-                                    Color="Color.Secondary"
-                                    OnClick="@(() => AddVariant(s))">
+                        <!-- ★ DropZone の外に出す（重要） -->
+                        <MudButton Class="mt-2 ml-auto"
+                                   Variant="Variant.Outlined"
+                                   Color="Color.Secondary"
+                                   OnClick="@(() => AddVariant(s))">
                             ＋ 封入品追加
                         </MudButton>
 
@@ -113,13 +145,13 @@
                             子商品削除
                         </MudButton>
 
-                    </div>
-                </MudPaper>
-            }
+                </div>
+            </MudPaper>
+        }
 
-        </MudDropZone>
+    </MudDropZone>
 
-    </MudDropContainer>
+</MudDropContainer>
 
     <MudButton Variant="Variant.Outlined"
                Color="Color.Primary"
@@ -237,8 +269,13 @@
                 var vvm = new ProductVariantViewModel
                 {
                     Name = v.Name,
-                    OrderIndex = v.OrderIndex
+                    OrderIndex = v.OrderIndex,
+                    Owned = v.Owned,
+                    Wanted = v.Wanted,
+                    Surplus = v.Surplus
                 };
+
+                vvm.IsInfinite = (v.Wanted == -1);
 
                 // キャラ紐付け
                 var charsResult = await Supabase.Client
@@ -292,6 +329,14 @@
     {
         for (int i = 0; i < s.Variants.Count; i++)
             s.Variants[i].OrderIndex = i;
+    }
+
+    void OnInfiniteChanged(ProductVariantViewModel v)
+    {
+        if (v.IsInfinite)
+            v.Wanted = 0;
+
+        StateHasChanged();
     }
 
     // ------------------------------
@@ -381,7 +426,6 @@
 
             if (vm.Source.Id == Guid.Empty)
             {
-                // Insert
                 vm.Source.ProductId = product.Id;
                 var sResult = await Supabase.Client.From<VariantSource>().Insert(vm.Source);
                 savedSource = sResult.Models.First();
@@ -389,7 +433,6 @@
             }
             else
             {
-                // Update
                 await Supabase.Client.From<VariantSource>().Update(vm.Source);
                 savedSource = vm.Source;
             }
@@ -423,6 +466,12 @@
             // ------------------------------
             foreach (var v in vm.Variants)
             {
+                // ★ 希望数の∞チェックを反映
+                if (v.IsInfinite)
+                    v.Wanted = -1;
+                else
+                    v.Wanted = Math.Max(0, v.Wanted);
+
                 ProductVariant savedVariant;
 
                 if (!v.Id.HasValue)
@@ -433,7 +482,11 @@
                         ProductId = product.Id,
                         SourceId = savedSource.Id,
                         Name = v.Name,
-                        OrderIndex = v.OrderIndex
+                        OrderIndex = v.OrderIndex,
+
+                        Owned = v.Owned,
+                        Wanted = v.Wanted,
+                        Surplus = v.Surplus
                     };
 
                     var vResult = await Supabase.Client.From<ProductVariant>().Insert(insertVariant);
@@ -449,7 +502,11 @@
                         ProductId = product.Id,
                         SourceId = savedSource.Id,
                         Name = v.Name,
-                        OrderIndex = v.OrderIndex
+                        OrderIndex = v.OrderIndex,
+
+                        Owned = v.Owned,
+                        Wanted = v.Wanted,
+                        Surplus = v.Surplus
                     };
 
                     await Supabase.Client.From<ProductVariant>().Update(updateVariant);
@@ -479,6 +536,7 @@
 
         Nav.NavigateTo("products");
     }
+
 
     // ------------------------------
     // 新規キャラ追加
