@@ -25,133 +25,98 @@
 
     <MudDivider Class="my-4" />
 
-    <!-- 子商品 -->
-<!-- 外側の DropContainer -->
-<MudDropContainer T="VariantSourceViewModel"
-                  Items="sources"
-                  ItemUpdated="OnSourceReordered">
+    @foreach (var s in sources)
+    {
+        <MudPaper Class="pa-4 mb-4 d-flex" Style="border-left:4px solid #90caf9;">
+            <div style="flex:1">
 
-    <MudDropZone T="VariantSourceViewModel" Items="sources">
+                <!-- パック名 -->
+                <MudTextField @bind-Value="s.Source.Name" Label="パック名" />
+                <MudTextField @bind-Value="s.Source.Url" Label="URL" />
 
-        @foreach (var s in sources)
-        {
-            <MudPaper Class="pa-4 mb-4 d-flex" Style="border-left:4px solid #90caf9;">
-                <div style="flex:1">
+                <MudDivider Class="my-2" />
 
-                    <MudTextField @bind-Value="s.Source.Name" Label="パック名" />
-                    <MudTextField @bind-Value="s.Source.Url" Label="URL" />
+                <!-- 封入品一覧 -->
+                @foreach (var variant in s.Variants)
+                {
+                    <MudPaper Class="pa-2 mb-2" Style="border:1px solid #ccc;">
+                        <MudGrid>
 
-                    <MudDivider Class="my-2" />
+                            <!-- 名前 -->
+                            <MudItem xs="12" sm="4">
+                                <MudTextField @bind-Value="variant.Name" Label="名前" />
+                            </MudItem>
 
-                        <!-- 内側の DropContainer（封入品） -->
-                        <MudDropContainer T="ProductVariantViewModel"
-                                          Items="s.Variants"
-                                          ItemUpdated="@( (MudItemDropInfo<ProductVariantViewModel> info) => OnVariantReordered(s, info) )">
+                            <!-- キャラ選択 -->
+                            <MudItem xs="12" sm="4">
+                                <MudSelect T="int"
+                                           SelectedValues="variant.CharacterIds"
+                                           SelectedValuesChanged="@(ids => variant.CharacterIds = ids.ToHashSet())"
+                                           MultiSelection="true"
+                                           Dense="true"
+                                           ToStringFunc="id => CharacterCandidates.FirstOrDefault(c => c.Id == id)?.Name ?? id.ToString()">
 
-                            <MudDropZone T="ProductVariantViewModel" Items="s.Variants">
+                                    @foreach (var c in CharacterCandidates)
+                                    {
+                                        <MudSelectItem Value="@c.Id">@c.Name</MudSelectItem>
+                                    }
+                                </MudSelect>
 
-                                @foreach (var variant in s.Variants)
-                                {
-                                    <MudPaper Class="pa-2 mb-2" Style="border:1px solid #ccc;">
-                                        <MudGrid>
+                                <MudTextField @bind-Value="NewCharacterName"
+                                              Placeholder="新規キャラ名を追加"
+                                              OnBlur="@(() => AddNewCharacter(variant))" />
+                            </MudItem>
 
-                                            <!-- 名前 -->
-                                            <MudItem xs="12" sm="4">
-                                                <MudTextField @bind-Value="variant.Name" Label="名前" />
-                                            </MudItem>
+                            <!-- 順番（手動入力） -->
+                            <MudItem xs="6" sm="2">
+                                <MudNumericField @bind-Value="variant.OrderIndex" Label="順番" />
+                            </MudItem>
 
-                                            <!-- キャラ選択 -->
-                                            <MudItem xs="12" sm="4">
-                                                <MudSelect T="int"
-                                                           SelectedValues="variant.CharacterIds"
-                                                           SelectedValuesChanged="@(ids => variant.CharacterIds = ids.ToHashSet())"
-                                                           MultiSelection="true"
-                                                           Dense="true"
-                                                           ToStringFunc="id => CharacterCandidates.FirstOrDefault(c => c.Id == id)?.Name ?? id.ToString()">
+                            <!-- 削除 -->
+                            <MudItem xs="6" sm="2" Class="d-flex align-center">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Color="Color.Error"
+                                               Disabled="@(s.Variants.Count == 1)"
+                                               OnClick="@(() => RemoveVariant(s, variant))" />
+                            </MudItem>
 
-                                                    @foreach (var c in CharacterCandidates)
-                                                    {
-                                                        <MudSelectItem Value="@c.Id">@c.Name</MudSelectItem>
-                                                    }
-                                                </MudSelect>
+                            <!-- 所持数 -->
+                            <MudItem xs="6" sm="2">
+                                <MudNumericField @bind-Value="variant.Owned" Label="所持数" Min="0" />
+                            </MudItem>
 
-                                                <!-- 新規キャラ追加 -->
-                                                <MudTextField @bind-Value="NewCharacterName"
-                                                              Placeholder="新規キャラ名を追加"
-                                                              OnBlur="@(() => AddNewCharacter(variant))" />
-                                            </MudItem>
+                            <!-- 希望数 -->
+                            <MudItem xs="6" sm="2">
+                                <MudNumericField @bind-Value="variant.Wanted"
+                                                 Label="希望数"
+                                                 Min="0" />
+                            </MudItem>
 
-                                            <!-- 順番 -->
-                                            <MudItem xs="6" sm="2">
-                                                <MudNumericField @bind-Value="variant.OrderIndex" Label="順番" />
-                                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                }
 
-                                            <!-- 削除ボタン -->
-                                            <MudItem xs="6" sm="2" Class="d-flex align-center">
-                                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                               Color="Color.Error"
-                                                               Disabled="@(s.Variants.Count == 1)"
-                                                               OnClick="@(() => RemoveVariant(s, variant))" />
-                                            </MudItem>
+                <!-- 封入品追加 -->
+                <MudButton Class="mt-2 ml-auto"
+                           Variant="Variant.Outlined"
+                           Color="Color.Secondary"
+                           OnClick="@(() => AddVariant(s))">
+                    ＋ 封入品追加
+                </MudButton>
 
-                                            <!-- 所持数 -->
-                                            <MudItem xs="6" sm="2">
-                                                <MudNumericField @bind-Value="variant.Owned" Label="所持数" Min="0" />
-                                            </MudItem>
+                <MudDivider Class="my-2" />
 
-                                            <!-- 希望数 -->
-                                            <MudItem xs="6" sm="2">
-                                                <MudNumericField @bind-Value="variant.Wanted"
-                                                                 Label="希望数"
-                                                                 Min="0"
-                                                                 Disabled="variant.IsInfinite" />
-                                            </MudItem>
+                <!-- 子商品削除 -->
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Error"
+                           Disabled="@(sources.Count == 1)"
+                           OnClick="@(() => RemoveSource(s))">
+                    子商品削除
+                </MudButton>
 
-                                            <!-- ∞チェック -->
-                                            <MudItem xs="6" sm="2" Class="d-flex align-center">
-                                                <MudCheckBox T="bool"
-                                                             @bind-Checked="variant.IsInfinite"
-                                                             Label="∞"
-                                                             OnBlur="@(() => OnInfiniteChanged(variant))" />
-                                            </MudItem>
-
-                                            <!-- 余剰 -->
-                                            <MudItem xs="6" sm="2">
-                                                <MudNumericField @bind-Value="variant.Surplus" Label="余剰" Min="0" />
-                                            </MudItem>
-
-                                        </MudGrid>
-                                    </MudPaper>
-                                }
-
-                            </MudDropZone>
-
-                        </MudDropContainer>
-
-                        <!-- ★ DropZone の外に出す（重要） -->
-                        <MudButton Class="mt-2 ml-auto"
-                                   Variant="Variant.Outlined"
-                                   Color="Color.Secondary"
-                                   OnClick="@(() => AddVariant(s))">
-                            ＋ 封入品追加
-                        </MudButton>
-
-                        <MudDivider Class="my-2" />
-
-                        <MudButton Variant="Variant.Text"
-                                   Color="Color.Error"
-                                   Disabled="@(sources.Count == 1)"
-                                   OnClick="@(() => RemoveSource(s))">
-                            子商品削除
-                        </MudButton>
-
-                </div>
-            </MudPaper>
-        }
-
-    </MudDropZone>
-
-</MudDropContainer>
+            </div>
+        </MudPaper>
+    }
 
     <MudButton Variant="Variant.Outlined"
                Color="Color.Primary"
@@ -167,7 +132,9 @@
         @(IsEditMode ? "変更を保存" : "すべて保存する")
     </MudButton>
 
-    <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="@(() => Nav.NavigateTo("products"))">
+    <MudButton Variant="Variant.Text"
+               Color="Color.Secondary"
+               OnClick="@(() => GoBack())">
         ← 戻る
     </MudButton>
 
@@ -200,7 +167,7 @@
             .Get();
 
         AllSeries = seriesResult.Models;
-        
+
         if (IsEditMode)
         {
             product = await Supabase.Client
@@ -252,12 +219,8 @@
 
         foreach (var s in sourcesResult.Models)
         {
-            var vm = new VariantSourceViewModel
-            {
-                Source = s
-            };
+            var vm = new VariantSourceViewModel { Source = s };
 
-            // 封入品（ProductVariant）
             var variantsResult = await Supabase.Client
                 .From<ProductVariant>()
                 .Where(x => x.SourceId == s.Id)
@@ -268,14 +231,13 @@
             {
                 var vvm = new ProductVariantViewModel
                 {
+                    Id = v.Id,
                     Name = v.Name,
                     OrderIndex = v.OrderIndex,
                     Owned = v.Owned,
                     Wanted = v.Wanted,
-                    Surplus = v.Surplus
+                    CharacterIds = new HashSet<int>()
                 };
-
-                vvm.IsInfinite = (v.Wanted == -1);
 
                 // キャラ紐付け
                 var charsResult = await Supabase.Client
@@ -286,8 +248,6 @@
                 vvm.CharacterIds = charsResult.Models
                     .Select(x => x.CharacterId)
                     .ToHashSet();
-
-                vvm.Id = v.Id;
 
                 vm.Variants.Add(vvm);
             }
@@ -319,25 +279,7 @@
             s.Variants.Remove(v);
     }
 
-    void OnSourceReordered(MudItemDropInfo<VariantSourceViewModel> info)
-    {
-        for (int i = 0; i < sources.Count; i++)
-            sources[i].Source.OrderIndex = i;
-    }
-
-    void OnVariantReordered(VariantSourceViewModel s, MudItemDropInfo<ProductVariantViewModel> info)
-    {
-        for (int i = 0; i < s.Variants.Count; i++)
-            s.Variants[i].OrderIndex = i;
-    }
-
-    void OnInfiniteChanged(ProductVariantViewModel v)
-    {
-        if (v.IsInfinite)
-            v.Wanted = 0;
-
-        StateHasChanged();
-    }
+    void GoBack() => Nav.NavigateTo("products");
 
     // ------------------------------
     // 作品 → キャラ一覧
@@ -375,13 +317,11 @@
     }
 
     // ------------------------------
-    // 保存（新規）
+    // 保存（新仕様）
     // ------------------------------
     private async Task SaveAll()
     {
-        // ------------------------------
         // 1. 親商品 Insert/Update
-        // ------------------------------
         if (product.Id == Guid.Empty)
         {
             var result = await Supabase.Client.From<Product>().Insert(product);
@@ -392,24 +332,19 @@
             await Supabase.Client.From<Product>().Update(product);
         }
 
-        // ------------------------------
-        // 2. 既存の子商品を取得（削除判定用）
-        // ------------------------------
+        // 2. 既存 Source の削除判定
         var existingSources = await Supabase.Client
             .From<VariantSource>()
             .Where(x => x.ProductId == product.Id)
             .Get();
 
         var existingSourceIds = existingSources.Models.Select(x => x.Id).ToHashSet();
-
         var currentSourceIds = sources
             .Where(s => s.Source.Id != Guid.Empty)
             .Select(s => s.Source.Id)
             .ToHashSet();
 
-        // 削除された Source を DB から削除
-        var deletedSourceIds = existingSourceIds.Except(currentSourceIds);
-        foreach (var delId in deletedSourceIds)
+        foreach (var delId in existingSourceIds.Except(currentSourceIds))
         {
             await Supabase.Client
                 .From<VariantSource>()
@@ -417,9 +352,7 @@
                 .Delete();
         }
 
-        // ------------------------------
-        // 3. 子商品 Insert/Update
-        // ------------------------------
+        // 3. Source Insert/Update
         foreach (var vm in sources)
         {
             VariantSource savedSource;
@@ -437,9 +370,7 @@
                 savedSource = vm.Source;
             }
 
-            // ------------------------------
-            // 4. 既存の Variant を取得（削除判定用）
-            // ------------------------------
+            // 4. Variant 削除判定
             var existingVariants = await Supabase.Client
                 .From<ProductVariant>()
                 .Where(x => x.SourceId == savedSource.Id)
@@ -451,9 +382,7 @@
                 .Select(v => v.Id!.Value)
                 .ToHashSet();
 
-            // 削除された Variant を DB から削除
-            var deletedVariantIds = existingVariantIds.Except(currentVariantIds);
-            foreach (var delId in deletedVariantIds)
+            foreach (var delId in existingVariantIds.Except(currentVariantIds))
             {
                 await Supabase.Client
                     .From<ProductVariant>()
@@ -461,32 +390,21 @@
                     .Delete();
             }
 
-            // ------------------------------
             // 5. Variant Insert/Update
-            // ------------------------------
             foreach (var v in vm.Variants)
             {
-                // ★ 希望数の∞チェックを反映
-                if (v.IsInfinite)
-                    v.Wanted = -1;
-                else
-                    v.Wanted = Math.Max(0, v.Wanted);
-
                 ProductVariant savedVariant;
 
                 if (!v.Id.HasValue)
                 {
-                    // Insert
                     var insertVariant = new ProductVariant
                     {
                         ProductId = product.Id,
                         SourceId = savedSource.Id,
                         Name = v.Name,
                         OrderIndex = v.OrderIndex,
-
                         Owned = v.Owned,
-                        Wanted = v.Wanted,
-                        Surplus = v.Surplus
+                        Wanted = v.Wanted
                     };
 
                     var vResult = await Supabase.Client.From<ProductVariant>().Insert(insertVariant);
@@ -495,7 +413,6 @@
                 }
                 else
                 {
-                    // Update
                     var updateVariant = new ProductVariant
                     {
                         Id = v.Id.Value,
@@ -503,19 +420,15 @@
                         SourceId = savedSource.Id,
                         Name = v.Name,
                         OrderIndex = v.OrderIndex,
-
                         Owned = v.Owned,
-                        Wanted = v.Wanted,
-                        Surplus = v.Surplus
+                        Wanted = v.Wanted
                     };
 
                     await Supabase.Client.From<ProductVariant>().Update(updateVariant);
                     savedVariant = updateVariant;
                 }
 
-                // ------------------------------
-                // 6. キャラ紐付けは一度全部削除して再 Insert
-                // ------------------------------
+                // 6. キャラ紐付け再 Insert
                 await Supabase.Client
                     .From<ProductVariantCharacter>()
                     .Where(x => x.ProductVariantId == savedVariant.Id)
@@ -534,9 +447,8 @@
             }
         }
 
-        Nav.NavigateTo("products");
+        GoBack();
     }
-
 
     // ------------------------------
     // 新規キャラ追加

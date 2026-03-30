@@ -1,7 +1,5 @@
 ﻿using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 
 [Table("product_variants")]
 public class ProductVariant : BaseModel
@@ -33,8 +31,6 @@ public class ProductVariant : BaseModel
     [Column("wanted")]
     public int Wanted { get; set; } = 0;   // -1 = ∞
 
-    [Column("surplus")]
-    public int Surplus { get; set; } = 0;
 }
 
 public class ProductVariantViewModel
@@ -46,6 +42,4 @@ public class ProductVariantViewModel
     public int OrderIndex { get; set; }
     public int Owned { get; set; }
     public int Wanted { get; set; }
-    public int Surplus { get; set; }
-    public bool IsInfinite { get; set; }
 }

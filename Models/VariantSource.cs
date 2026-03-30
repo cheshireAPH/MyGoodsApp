@@ -25,6 +25,12 @@ public class VariantSource : BaseModel
 
 public class VariantSourceViewModel
 {
-    public VariantSource Source { get; set; } = new();
-    public List<ProductVariantViewModel> Variants { get; set; } = new();
+    public VariantSource Source { get; set; }
+    public List<ProductVariantViewModel> Variants { get; set; }
+
+    public VariantSourceViewModel()
+    {
+        Source = new VariantSource();
+        Variants = new List<ProductVariantViewModel>();
+    }
 }
