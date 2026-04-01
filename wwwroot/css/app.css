@@ -133,3 +133,13 @@ code {
         background-color: #ffb6d9 !important;
         color: #fff !important;
     }
+
+.drag-handle {
+    cursor: grab;
+    font-size: 20px;
+    color: #666;
+}
+
+.sortable-ghost {
+    opacity: 0.4;
+}
