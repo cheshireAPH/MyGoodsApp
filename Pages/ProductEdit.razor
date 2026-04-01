@@ -2,7 +2,6 @@
 @page "/products/edit/{id:guid}"
 @inject SupabaseClientService Supabase
 @inject NavigationManager Nav
-@inject IJSRuntime JS
 
 <MudPaper Class="pa-4 mx-auto" MaxWidth="900px" Elevation="4">
 
@@ -26,111 +25,119 @@
 
     <MudDivider Class="my-4" />
 
-    <!-- 子商品リスト（SortableJS 対象） -->
-    <div id="source-list">
-        @for (var i = 0; i < sources.Count; i++)
-        {
-            var s = sources[i];
+    <!-- 子商品リスト -->
+    @for (var i = 0; i < sources.Count; i++)
+    {
+        var s = sources[i];
 
-            <!-- ★ SortableJS が並び替える要素 -->
-            <div class="source-item mb-4">
-                <MudPaper Class="pa-4" Style="border-left:4px solid #90caf9;">
+        <MudPaper Class="pa-4 mb-4" Style="border-left:4px solid #90caf9;">
 
-                    <div class="drag-handle mb-1">☰</div>
+            <!-- 子商品の上下移動 -->
+            <div class="d-flex mb-2">
+                <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp"
+                               Disabled="@(i == 0)"
+                               OnClick="@(() => MoveSourceUp(i))" />
 
-                    <MudTextField @bind-Value="s.Source.Name" Label="パック名" />
-                    <MudTextField @bind-Value="s.Source.Url" Label="URL" />
-
-                    <MudDivider Class="my-2" />
-
-                    <!-- 封入品リスト（SortableJS 対象） -->
-                    <div id="variant-list-@i">
-                        @for (var j = 0; j < s.Variants.Count; j++)
-                        {
-                            var variant = s.Variants[j];
-
-                            <!-- ★ SortableJS が並び替える要素 -->
-                            <div class="variant-item mb-2">
-
-                                <MudPaper Class="pa-2" Style="border:1px solid #ccc;">
-                                    <div class="drag-handle mb-1">☰</div>
-
-                                    <MudGrid>
-
-                                        <!-- 名前 -->
-                                        <MudItem xs="12" sm="4">
-                                            <MudTextField @bind-Value="variant.Name" Label="名前" />
-                                        </MudItem>
-
-                                        <!-- キャラ選択 -->
-                                        <MudItem xs="12" sm="4">
-                                            <MudSelect T="int"
-                                                       SelectedValues="variant.CharacterIds"
-                                                       SelectedValuesChanged="@(ids => variant.CharacterIds = ids.ToHashSet())"
-                                                       MultiSelection="true"
-                                                       Dense="true"
-                                                       ToStringFunc="id => CharacterCandidates.FirstOrDefault(c => c.Id == id)?.Name ?? id.ToString()">
-
-                                                @foreach (var c in CharacterCandidates)
-                                                {
-                                                    <MudSelectItem Value="@c.Id">@c.Name</MudSelectItem>
-                                                }
-                                            </MudSelect>
-
-                                            <MudTextField @bind-Value="NewCharacterName"
-                                                          Placeholder="新規キャラ名を追加"
-                                                          OnBlur="@(() => AddNewCharacter(variant))" />
-                                        </MudItem>
-
-                                        <!-- 削除 -->
-                                        <MudItem xs="6" sm="2" Class="d-flex align-center">
-                                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                           Color="Color.Error"
-                                                           Disabled="@(s.Variants.Count == 1)"
-                                                           OnClick="@(() => RemoveVariant(s, variant))" />
-                                        </MudItem>
-
-                                        <!-- 所持数 -->
-                                        <MudItem xs="6" sm="2">
-                                            <MudNumericField @bind-Value="variant.Owned" Label="所持数" Min="0" />
-                                        </MudItem>
-
-                                        <!-- 希望数 -->
-                                        <MudItem xs="6" sm="2">
-                                            <MudNumericField @bind-Value="variant.Wanted"
-                                                             Label="希望数"
-                                                             Min="0" />
-                                        </MudItem>
-
-                                    </MudGrid>
-                                </MudPaper>
-
-                            </div>
-                        }
-                    </div>
-
-                    <!-- 封入品追加 -->
-                    <MudButton Class="mt-2 ml-auto"
-                               Variant="Variant.Outlined"
-                               Color="Color.Secondary"
-                               OnClick="@(() => AddVariant(s))">
-                        ＋ 封入品追加
-                    </MudButton>
-
-                    <MudDivider Class="my-2" />
-
-                    <!-- 子商品削除 -->
-                    <MudButton Variant="Variant.Text"
-                               Color="Color.Error"
-                               Disabled="@(sources.Count == 1)"
-                               OnClick="@(() => RemoveSource(s))">
-                        子商品削除
-                    </MudButton>
-
-                </MudPaper>
+                <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                               Disabled="@(i == sources.Count - 1)"
+                               OnClick="@(() => MoveSourceDown(i))" />
             </div>
-        }
-    </div>
+
+            <!-- パック名 -->
+            <MudTextField @bind-Value="s.Source.Name" Label="パック名" />
+            <MudTextField @bind-Value="s.Source.Url" Label="URL" />
+
+            <MudDivider Class="my-2" />
+
+            <!-- 封入品グリッド -->
+            <MudTable Dense="true" Hover="true" Bordered="true" Items="@s.Variants">
+                <HeaderContent>
+                    <MudTh>名前</MudTh>
+                    <MudTh>キャラ</MudTh>
+                    <MudTh>所持</MudTh>
+                    <MudTh>希望</MudTh>
+                    <MudTh>順番</MudTh>
+                    <MudTh>削除</MudTh>
+                </HeaderContent>
+
+                <RowTemplate>
+                    @{
+                        var variant = context;
+                        var rowIndex = s.Variants.IndexOf(variant);
+                    }
+
+                    <MudTd>
+                        <MudTextField @bind-Value="context.Name" />
+                    </MudTd>
+
+                    <MudTd>
+                        <MudSelect T="int"
+                                   SelectedValues="context.CharacterIds"
+                                   SelectedValuesChanged="@(ids => context.CharacterIds = ids.ToHashSet())"
+                                   MultiSelection="true"
+                                   Dense="true"
+                                   ToStringFunc="id => CharacterCandidates.FirstOrDefault(c => c.Id == id)?.Name ?? id.ToString()">
+                            @foreach (var c in CharacterCandidates)
+                            {
+                                <MudSelectItem Value="@c.Id">@c.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+
+                        <!-- ★ 新規キャラ追加欄（復活） -->
+                        <MudTextField @bind-Value="NewCharacterName"
+                                      Placeholder="新規キャラ名を追加"
+                                      OnBlur="@(() => AddNewCharacter(variant))" />
+                    </MudTd>
+
+                    <MudTd>
+                        <MudNumericField @bind-Value="context.Owned" Min="0" />
+                    </MudTd>
+
+                    <MudTd>
+                        <MudNumericField @bind-Value="context.Wanted" Min="0" />
+                    </MudTd>
+
+                    <MudTd>
+                        <div class="d-flex flex-column">
+                            <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp"
+                                           Disabled="@(rowIndex == 0)"
+                                           OnClick="@(() => MoveVariantUp(s, rowIndex))" />
+
+                            <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                                           Disabled="@(rowIndex == s.Variants.Count - 1)"
+                                           OnClick="@(() => MoveVariantDown(s, rowIndex))" />
+                        </div>
+                    </MudTd>
+
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Color="Color.Error"
+                                       Disabled="@(s.Variants.Count == 1)"
+                                       OnClick="@(() => RemoveVariant(s, context))" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+
+            <!-- 封入品追加 -->
+            <MudButton Class="mt-2"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       OnClick="@(() => AddVariant(s))">
+                ＋ 封入品追加
+            </MudButton>
+
+            <MudDivider Class="my-2" />
+
+            <!-- 子商品削除 -->
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Error"
+                       Disabled="@(sources.Count == 1)"
+                       OnClick="@(() => RemoveSource(s))">
+                子商品削除
+            </MudButton>
+
+        </MudPaper>
+    }
 
     <MudButton Variant="Variant.Outlined"
                Color="Color.Primary"
@@ -155,8 +162,23 @@
 </MudPaper>
 
 @code {
-    DotNetObjectReference<ProductEdit>? dotnetRef;
 
+    /* ------------------------------
+       SearchSeries
+       ------------------------------ */
+    private Task<IEnumerable<Series>> SearchSeries(string value, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Task.FromResult(AllSeries.AsEnumerable());
+
+        return Task.FromResult(
+            AllSeries.Where(s => s.Name.Contains(value, StringComparison.OrdinalIgnoreCase))
+        );
+    }
+
+    /* ------------------------------
+    状態
+       ------------------------------ */
     Product product = new();
     List<VariantSourceViewModel> sources = new();
     Series? SelectedSeries;
@@ -167,6 +189,9 @@
     [Parameter] public Guid? Id { get; set; }
     private bool IsEditMode => Id.HasValue;
 
+    /* ------------------------------
+    初期化
+       ------------------------------ */
     protected override async Task OnInitializedAsync()
     {
         var seriesResult = await Supabase.Client
@@ -213,47 +238,9 @@
         }
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            dotnetRef = DotNetObjectReference.Create(this);
-
-            // 子商品
-            await JS.InvokeVoidAsync("initSortable", "source-list", dotnetRef, "sources");
-
-            // 封入品
-            for (int i = 0; i < sources.Count; i++)
-            {
-                await JS.InvokeVoidAsync("initSortable", $"variant-list-{i}", dotnetRef, $"variants-{i}");
-            }
-        }
-    }
-
-    [JSInvokable]
-    public void OnReordered(string listName, int oldIndex, int newIndex)
-    {
-        if (listName == "sources")
-        {
-            var item = sources[oldIndex];
-            sources.RemoveAt(oldIndex);
-            sources.Insert(newIndex, item);
-        }
-        else if (listName.StartsWith("variants-"))
-        {
-            var indexText = listName.Replace("variants-", "");
-            if (int.TryParse(indexText, out var srcIndex))
-            {
-                var list = sources[srcIndex].Variants;
-                var item = list[oldIndex];
-                list.RemoveAt(oldIndex);
-                list.Insert(newIndex, item);
-            }
-        }
-
-        StateHasChanged();
-    }
-
+    /* ------------------------------
+    子商品・封入品読み込み
+       ------------------------------ */
     private async Task<List<VariantSourceViewModel>> LoadSources(Guid productId)
     {
         var sourcesResult = await Supabase.Client
@@ -304,8 +291,35 @@
         return vmList;
     }
 
+    /* ------------------------------
+    UI 操作
+       ------------------------------ */
+    private async Task AddNewCharacter(ProductVariantViewModel v)
+    {
+        if (string.IsNullOrWhiteSpace(NewCharacterName) || SelectedSeries == null)
+            return;
+
+        var newChar = new Character
+        {
+            Name = NewCharacterName,
+            SeriesId = SelectedSeries.Id
+        };
+
+        var result = await Supabase.Client.From<Character>().Insert(newChar);
+        var saved = result.Models.First();
+
+        // キャラ一覧に追加
+        CharacterCandidates.Add(saved);
+
+        // 今追加したキャラを選択状態にする
+        v.CharacterIds.Add(saved.Id);
+
+        // 入力欄クリア
+        NewCharacterName = "";
+    }
+
     void AddSource() =>
-        sources.Add(new VariantSourceViewModel { Variants = new() { new ProductVariantViewModel() } });
+    sources.Add(new VariantSourceViewModel { Variants = new() { new ProductVariantViewModel() } });
 
     void RemoveSource(VariantSourceViewModel s)
     {
@@ -322,18 +336,43 @@
             s.Variants.Remove(v);
     }
 
-    void GoBack() => Nav.NavigateTo("products");
-
-    private Task<IEnumerable<Series>> SearchSeries(string value, CancellationToken token)
+    void MoveVariantUp(VariantSourceViewModel s, int index)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            return Task.FromResult(AllSeries.AsEnumerable());
-
-        return Task.FromResult(
-            AllSeries.Where(s => s.Name.Contains(value, StringComparison.OrdinalIgnoreCase))
-        );
+        if (index == 0) return;
+        var item = s.Variants[index];
+        s.Variants.RemoveAt(index);
+        s.Variants.Insert(index - 1, item);
     }
 
+    void MoveVariantDown(VariantSourceViewModel s, int index)
+    {
+        if (index == s.Variants.Count - 1) return;
+        var item = s.Variants[index];
+        s.Variants.RemoveAt(index);
+        s.Variants.Insert(index + 1, item);
+    }
+
+    void MoveSourceUp(int index)
+    {
+        if (index == 0) return;
+        var item = sources[index];
+        sources.RemoveAt(index);
+        sources.Insert(index - 1, item);
+    }
+
+    void MoveSourceDown(int index)
+    {
+        if (index == sources.Count - 1) return;
+        var item = sources[index];
+        sources.RemoveAt(index);
+        sources.Insert(index + 1, item);
+    }
+
+    void GoBack() => Nav.NavigateTo("products");
+
+    /* ------------------------------
+    作品変更 → キャラ一覧更新
+       ------------------------------ */
     private async Task OnSeriesChanged(Series value)
     {
         SelectedSeries = value;
@@ -356,6 +395,10 @@
         CharacterCandidates = result.Models;
     }
 
+    /// <summary>
+    /// 保存処理
+    /// </summary>
+    /// <returns></returns>
     private async Task SaveAll()
     {
         // 自動採番
@@ -495,25 +538,5 @@
         }
 
         GoBack();
-    }
-
-    private async Task AddNewCharacter(ProductVariantViewModel v)
-    {
-        if (string.IsNullOrWhiteSpace(NewCharacterName) || SelectedSeries == null)
-            return;
-
-        var newChar = new Character
-        {
-            Name = NewCharacterName,
-            SeriesId = SelectedSeries.Id
-        };
-
-        var result = await Supabase.Client.From<Character>().Insert(newChar);
-        var saved = result.Models.First();
-
-        CharacterCandidates.Add(saved);
-        v.CharacterIds.Add(saved.Id);
-
-        NewCharacterName = "";
     }
 }
