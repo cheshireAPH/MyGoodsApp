@@ -1,12 +1,16 @@
 ﻿@page "/products/new"
 @page "/products/edit/{id:guid}"
+@page "/templates/new"
+@page "/templates/edit/{id:guid}"
 @inject SupabaseClientService Supabase
 @inject NavigationManager Nav
 
 <MudPaper Class="pa-4 mx-auto" MaxWidth="900px" Elevation="4">
 
     <MudText Typo="Typo.h5" Class="mb-4">
-        @(IsEditMode ? "商品を編集" : "新規商品追加")
+        @(IsTemplateMode
+            ? (IsEditMode ? "テンプレを編集" : "新規テンプレ作成")
+            : (IsEditMode ? "商品を編集" : "新規商品追加"))
     </MudText>
 
     <!-- 親商品 -->
@@ -164,7 +168,7 @@
 @code {
 
     /* ------------------------------
-       SearchSeries
+    SearchSeries
        ------------------------------ */
     private Task<IEnumerable<Series>> SearchSeries(string value, CancellationToken token)
     {
@@ -188,6 +192,8 @@
 
     [Parameter] public Guid? Id { get; set; }
     private bool IsEditMode => Id.HasValue;
+    private bool IsTemplateMode => Nav.Uri.Contains("templates/");
+
 
     /* ------------------------------
     初期化
@@ -368,7 +374,13 @@
         sources.Insert(index + 1, item);
     }
 
-    void GoBack() => Nav.NavigateTo("products");
+    void GoBack()
+    {
+        if (IsTemplateMode)
+            Nav.NavigateTo("templates");
+        else
+            Nav.NavigateTo("products");
+    }
 
     /* ------------------------------
     作品変更 → キャラ一覧更新
@@ -395,12 +407,14 @@
         CharacterCandidates = result.Models;
     }
 
-    /// <summary>
-    /// 保存処理
-    /// </summary>
+    #region 保存
+
+    /// <summary>保存処理</summary>
     /// <returns></returns>
     private async Task SaveAll()
     {
+        product.IsTemplate = IsTemplateMode;
+        
         // 自動採番
         for (int i = 0; i < sources.Count; i++)
             sources[i].Source.OrderIndex = i;
@@ -493,8 +507,8 @@
                         SourceId = savedSource.Id,
                         Name = v.Name,
                         OrderIndex = v.OrderIndex,
-                        Owned = v.Owned,
-                        Wanted = v.Wanted
+                        Owned = IsTemplateMode ? 0 : v.Owned,
+                        Wanted = IsTemplateMode ? 0 : v.Wanted
                     };
 
                     var vResult = await Supabase.Client.From<ProductVariant>().Insert(insertVariant);
@@ -510,8 +524,8 @@
                         SourceId = savedSource.Id,
                         Name = v.Name,
                         OrderIndex = v.OrderIndex,
-                        Owned = v.Owned,
-                        Wanted = v.Wanted
+                        Owned = IsTemplateMode ? 0 : v.Owned,
+                        Wanted = IsTemplateMode ? 0 : v.Wanted
                     };
 
                     await Supabase.Client.From<ProductVariant>().Update(updateVariant);
@@ -539,4 +553,6 @@
 
         GoBack();
     }
+
+    #endregion 保存
 }

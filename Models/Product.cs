@@ -17,4 +17,8 @@ public class Product : BaseModel
 
     [Column("category")]
     public string Category { get; set; } = string.Empty;
+
+    [Column("is_template")]
+    public bool IsTemplate { get; set; } = false;
+
 }

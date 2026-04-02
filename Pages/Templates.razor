@@ -1,0 +1,91 @@
+﻿@page "/templates"
+@inject SupabaseClientService Supabase
+@inject NavigationManager Nav
+
+<MudPaper Class="pa-4 mx-auto" MaxWidth="900px" Elevation="4">
+
+    <MudText Typo="Typo.h5" Class="mb-4">
+        テンプレ一覧
+    </MudText>
+
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               OnClick="@CreateNewTemplate">
+        ＋ 新規テンプレ作成
+    </MudButton>
+
+    <MudDivider Class="my-4" />
+
+    <MudTable Items="@Items" Hover="true" Bordered="true">
+        <HeaderContent>
+            <MudTh>テンプレ名</MudTh>
+            <MudTh>作品名</MudTh>
+            <MudTh>操作</MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd>@context.Title</MudTd>
+            <MudTd>@GetSeriesName(context.SeriesId)</MudTd>
+            <MudTd>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Primary"
+                           OnClick="@(() => EditTemplate(context.Id))">
+                    編集
+                </MudButton>
+
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Error"
+                           OnClick="@(() => DeleteTemplate(context.Id))">
+                    削除
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+
+</MudPaper>
+
+@code {
+    List<Product> Items = new();
+    List<Series> AllSeries = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 作品一覧
+        var seriesResult = await Supabase.Client
+            .From<Series>()
+            .Select("*")
+            .Order(x => x.Name, Ordering.Ascending)
+            .Get();
+
+        AllSeries = seriesResult.Models;
+
+        // テンプレ一覧
+        var result = await Supabase.Client
+            .From<Product>()
+            .Select("*")
+            .Filter(x => x.IsTemplate, Operator.Equals, true)
+            .Order(x => x.Title, Ordering.Ascending)
+            .Get();
+
+        Items = result.Models;
+    }
+
+    string GetSeriesName(int? seriesId)
+        => AllSeries.FirstOrDefault(s => s.Id == seriesId)?.Name ?? "-";
+
+    void CreateNewTemplate()
+        => Nav.NavigateTo("templates/new");
+
+    void EditTemplate(Guid id)
+        => Nav.NavigateTo($"templates/edit/{id}");
+
+    async Task DeleteTemplate(Guid id)
+    {
+        await Supabase.Client
+            .From<Product>()
+            .Where(x => x.Id == id)
+            .Delete();
+
+        Items.RemoveAll(t => t.Id == id);
+    }
+}
