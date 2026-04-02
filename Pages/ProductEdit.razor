@@ -1,4 +1,5 @@
 ﻿@page "/products/new"
+@page "/products/new/{templateId:guid}"
 @page "/products/edit/{id:guid}"
 @page "/templates/new"
 @page "/templates/edit/{id:guid}"
@@ -202,6 +203,8 @@
     string NewCharacterName = "";
 
     [Parameter] public Guid? Id { get; set; }
+    [Parameter] public Guid? TemplateId { get; set; }
+
     private bool IsEditMode => Id.HasValue;
     private bool IsTemplateMode => Nav.Uri.Contains("templates/");
 
@@ -245,13 +248,55 @@
         else
         {
             product = new Product();
-            sources = new()
+
+            if (TemplateId.HasValue)
             {
-                new VariantSourceViewModel
+                // ------------------------------
+                // テンプレ本体を読み込む
+                // ------------------------------
+                var template = await Supabase.Client
+                    .From<Product>()
+                    .Where(x => x.Id == TemplateId.Value)
+                    .Single();
+
+                // 親商品のコピー（商品名は空にする）
+                product.SeriesId = template.SeriesId;
+                product.Category = template.Category;
+                product.IsTemplate = false; // 商品なので false
+                product.Title = "";         // 新規商品名は空欄
+
+                // 作品名の選択状態を反映
+                SelectedSeries = AllSeries.FirstOrDefault(s => s.Id == product.SeriesId);
+
+                // ------------------------------
+                // 子商品・封入品をテンプレからコピー
+                // ------------------------------
+                sources = await LoadSources(template.Id);
+
+                // コピーした ID を全部リセット（新規商品として保存するため）
+                foreach (var s in sources)
                 {
-                    Variants = new() { new ProductVariantViewModel() }
+                    s.Source.Id = Guid.Empty; // 新規 Insert 扱い
+
+                    foreach (var v in s.Variants)
+                    {
+                        v.Id = null;          // 新規 Insert 扱い
+                        v.Owned = 0;          // 所持数は 0 に初期化
+                                              // Wanted はテンプレの値を残す（紗香さんの希望）
+                    }
                 }
-            };
+            }
+            else
+            {
+                // 通常の新規作成
+                sources = new()
+        {
+            new VariantSourceViewModel
+            {
+                Variants = new() { new ProductVariantViewModel() }
+            }
+        };
+            }
         }
     }
 

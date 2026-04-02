@@ -28,6 +28,12 @@
             <MudTd>@GetSeriesName(context.SeriesId)</MudTd>
             <MudTd>
                 <MudButton Variant="Variant.Text"
+                           Color="Color.Secondary"
+                           OnClick="@(() => UseTemplate(context.Id))">
+                    使用
+                </MudButton>
+
+                <MudButton Variant="Variant.Text"
                            Color="Color.Primary"
                            OnClick="@(() => EditTemplate(context.Id))">
                     編集
@@ -88,4 +94,10 @@
 
         Items.RemoveAll(t => t.Id == id);
     }
+
+    void UseTemplate(Guid id)
+    {
+        Nav.NavigateTo($"products/new?templateId={id}");
+    }
+
 }
