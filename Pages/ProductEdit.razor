@@ -14,7 +14,9 @@
     </MudText>
 
     <!-- 親商品 -->
-    <MudTextField @bind-Value="product.Title" Label="商品名" Required="true" />
+    <MudTextField @bind-Value="product.Title"
+                  Label="@(IsTemplateMode ? "テンプレ名" : "商品名")"
+                  Required="true" />
 
     <MudAutocomplete T="Series"
                      Label="作品名"
@@ -49,7 +51,10 @@
 
             <!-- パック名 -->
             <MudTextField @bind-Value="s.Source.Name" Label="パック名" />
-            <MudTextField @bind-Value="s.Source.Url" Label="URL" />
+            @if (!IsTemplateMode)
+            {
+                <MudTextField @bind-Value="s.Source.Url" Label="URL" />
+            }
 
             <MudDivider Class="my-2" />
 
@@ -58,7 +63,10 @@
                 <HeaderContent>
                     <MudTh>名前</MudTh>
                     <MudTh>キャラ</MudTh>
-                    <MudTh>所持</MudTh>
+                    @if (!IsTemplateMode)
+                    {
+                        <MudTh>所持</MudTh>
+                    }
                     <MudTh>希望</MudTh>
                     <MudTh>順番</MudTh>
                     <MudTh>削除</MudTh>
@@ -93,9 +101,12 @@
                                       OnBlur="@(() => AddNewCharacter(variant))" />
                     </MudTd>
 
-                    <MudTd>
-                        <MudNumericField @bind-Value="context.Owned" Min="0" />
-                    </MudTd>
+                    @if (!IsTemplateMode)
+                    {
+                        <MudTd>
+                            <MudNumericField @bind-Value="context.Owned" Min="0" />
+                        </MudTd>
+                    }
 
                     <MudTd>
                         <MudNumericField @bind-Value="context.Wanted" Min="0" />
@@ -508,7 +519,7 @@
                         Name = v.Name,
                         OrderIndex = v.OrderIndex,
                         Owned = IsTemplateMode ? 0 : v.Owned,
-                        Wanted = IsTemplateMode ? 0 : v.Wanted
+                        Wanted = v.Wanted
                     };
 
                     var vResult = await Supabase.Client.From<ProductVariant>().Insert(insertVariant);
@@ -525,7 +536,7 @@
                         Name = v.Name,
                         OrderIndex = v.OrderIndex,
                         Owned = IsTemplateMode ? 0 : v.Owned,
-                        Wanted = IsTemplateMode ? 0 : v.Wanted
+                        Wanted = v.Wanted
                     };
 
                     await Supabase.Client.From<ProductVariant>().Update(updateVariant);
