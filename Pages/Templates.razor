@@ -69,7 +69,7 @@
         var result = await Supabase.Client
             .From<Product>()
             .Select("*")
-            .Filter(x => x.IsTemplate, Operator.Equals, true)
+            .Filter("is_template", Operator.Equals, "true")
             .Order(x => x.Title, Ordering.Ascending)
             .Get();
 
@@ -97,7 +97,7 @@
 
     void UseTemplate(Guid id)
     {
-        Nav.NavigateTo($"products/new?templateId={id}");
+        Nav.NavigateTo($"products/new/{id}");
     }
 
 }
