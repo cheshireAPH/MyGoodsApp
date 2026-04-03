@@ -99,7 +99,9 @@
     private async Task LoadVariantList()
     {
         // 1. 親商品
-        var productQuery = Supabase.Client.From<Product>();
+        var productQuery = Supabase.Client
+            .From<Product>()
+            .Filter("is_template", Operator.Equals, false);
 
         var productResult = SelectedSeriesId.HasValue
             ? await productQuery.Filter("series_id", Operator.Equals, SelectedSeriesId.Value).Get()
