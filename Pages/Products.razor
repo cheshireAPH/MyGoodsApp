@@ -23,48 +23,56 @@
         }
     </MudChipSet>
 
+    <!-- 商品一覧切り替えタブ -->
+    <MudTabs @bind-ActivePanelIndex="ActiveTab" Class="mb-4">
+        <MudTabPanel Text="所持">
+            @RenderOwnedTab()
+        </MudTabPanel>
+
+        <MudTabPanel Text="欲しい">
+            @RenderWantedTab()
+        </MudTabPanel>
+
+        <MudTabPanel Text="交換用">
+            @RenderTradeTab()
+        </MudTabPanel>
+    </MudTabs>
+
     <MudDivider Class="my-4" />
-
-    @if (VariantItems == null)
-    {
-        <p>読み込み中...</p>
-    }
-    else
-    {
-        @foreach (var categoryGroup in VariantItems.GroupBy(x => x.Category))
-        {
-            <MudExpansionPanel Text="@categoryGroup.Key">
-
-                @foreach (var productGroup in categoryGroup.GroupBy(x => x.ProductTitle))
-                {
-                    <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
-                             Style="border-left:4px solid #90caf9;padding-left:8px;">
-                        @productGroup.Key
-                    </MudText>
-
-                    @foreach (var item in productGroup.OrderBy(x => x.OrderIndex))
-                    {
-                        <MudLink Href="@($"products/edit/{item.ProductId}")" Class="ml-4">
-                            @item.DisplayName
-                        </MudLink>
-                    }
-                }
-
-            </MudExpansionPanel>
-        }
-    }
 
 </MudPaper>
 
 
 @code {
-    // ------------------------------
-    // 状態
-    // ------------------------------
+    #region 変数
+
     List<Series> AllSeries = new();
     int? SelectedSeriesId;
+    int ActiveTab = 0;
 
     List<VariantListItem>? VariantItems;
+
+    #endregion
+
+    #region プロパティ
+
+    /// <summary>所持タブ表示</summary>
+    private IEnumerable<VariantListItem> OwnedItems =>
+    VariantItems!
+        .Where(x => x.Wanted > 0) // 希望数1以上が前提
+        .Where(x => x.OwnedForDisplay > 0);
+
+    /// <summary>ほしいものタブ表示</summary>
+    private IEnumerable<VariantListItem> WantedItems =>
+    VariantItems!
+        .Where(x => x.WantedForDisplay != "0");
+
+    /// <summary>交換用タブ表示</summary>
+    private IEnumerable<VariantListItem> TradeItems =>
+    VariantItems!
+        .Where(x => x.TradeForDisplay > 0);
+
+    #endregion
 
     // ------------------------------
     // 初期化
@@ -137,7 +145,9 @@
                  DisplayName = string.IsNullOrWhiteSpace(v.Name)
                      ? p.Title
                      : $"{p.Title} - {v.Name}",
-                 OrderIndex = v.OrderIndex
+                 OrderIndex = v.OrderIndex,
+                 Owned = v.Owned,
+                 Wanted = v.Wanted
              })
             .OrderBy(x => x.Category)
             .ThenBy(x => x.ProductTitle)
@@ -151,9 +161,120 @@
         await LoadVariantList();
     }
 
-    // ------------------------------
-    // 一覧用 ViewModel
-    // ------------------------------
+    #region メソッド
+
+    /// <summary>所持タブ表示</summary>
+    private RenderFragment RenderOwnedTab() => __builder =>
+    {
+        if (OwnedItems == null || !OwnedItems.Any())
+        {
+            __builder.AddContent(0, "該当するアイテムがありません");
+            return;
+        }
+
+        foreach (var categoryGroup in OwnedItems.GroupBy(x => x.Category))
+        {
+            <MudExpansionPanel Text="@categoryGroup.Key">
+
+                @foreach (var productGroup in categoryGroup.GroupBy(x => x.ProductTitle))
+                {
+                    <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
+                             Style="border-left:4px solid #90caf9;padding-left:8px;">
+                        <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
+                            @productGroup.Key
+                        </MudLink>
+                    </MudText>
+
+                    @foreach (var item in productGroup.OrderBy(x => x.OrderIndex))
+                    {
+                        <div class="ml-4">
+                            @item.VariantName
+                            （@item.OwnedForDisplay）
+                        </div>
+                    }
+                }
+
+            </MudExpansionPanel>
+        }
+    };
+
+    /// <summary>ほしいものタブ表示</summary>
+    private RenderFragment RenderWantedTab() => __builder =>
+    {
+        if (WantedItems == null || !WantedItems.Any())
+        {
+            __builder.AddContent(0, "該当するアイテムがありません");
+            return;
+        }
+
+        foreach (var categoryGroup in WantedItems.GroupBy(x => x.Category))
+        {
+            <MudExpansionPanel Text="@categoryGroup.Key">
+
+                @foreach (var productGroup in categoryGroup.GroupBy(x => x.ProductTitle))
+                {
+                    <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
+                             Style="border-left:4px solid #ffb74d;padding-left:8px;">
+                        <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
+                            @productGroup.Key
+                        </MudLink>
+                    </MudText>
+
+                    @foreach (var item in productGroup.OrderBy(x => x.OrderIndex))
+                    {
+                        <div class="ml-4">
+                            @item.VariantName
+                            （@item.WantedForDisplay）
+                        </div>
+                    }
+                }
+
+            </MudExpansionPanel>
+        }
+    };
+
+    /// <summary>交換用タブ表示</summary>
+    private RenderFragment RenderTradeTab() => __builder =>
+    {
+        if (TradeItems == null || !TradeItems.Any())
+        {
+            __builder.AddContent(0, "該当するアイテムがありません");
+            return;
+        }
+
+        foreach (var categoryGroup in TradeItems.GroupBy(x => x.Category))
+        {
+            <MudExpansionPanel Text="@categoryGroup.Key">
+
+                @foreach (var productGroup in categoryGroup.GroupBy(x => x.ProductTitle))
+                {
+                    <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
+                             Style="border-left:4px solid #81c784;padding-left:8px;">
+                        <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
+                            @productGroup.Key
+                        </MudLink>
+                    </MudText>
+
+                    @foreach (var item in productGroup.OrderBy(x => x.OrderIndex))
+                    {
+                        <div class="ml-4">
+                            @item.VariantName
+                            （@item.TradeForDisplay）
+                        </div>
+                    }
+                }
+
+            </MudExpansionPanel>
+        }
+    };
+
+    #endregion
+
+    #region ViewModel
+
+    /// <summary>
+    /// 表示用リスト
+    /// </summary>
     public class VariantListItem
     {
         public Guid ProductId { get; set; }
@@ -162,5 +283,33 @@
         public string? VariantName { get; set; }
         public string DisplayName { get; set; } = "";
         public int OrderIndex { get; set; }
+
+        // --- 追加 ---
+        public int Owned { get; set; }
+        public int Wanted { get; set; }
+
+        // 所持タブ用（希望数を上限にする）
+        public int OwnedForDisplay =>
+            Wanted <= 0 ? 0 :
+            Owned < Wanted ? Owned : Wanted;
+
+        // 欲しいタブ用（Wanted - Owned）
+        public string WantedForDisplay
+        {
+            get
+            {
+                if (Wanted == 9999)
+                    return "∞"; // 無限回収
+
+                var diff = Wanted - Owned;
+                return diff > 0 ? diff.ToString() : "0";
+            }
+        }
+
+        // 交換用タブ用（Owned - Wanted）
+        public int TradeForDisplay =>
+            Owned - Wanted;
     }
+
+    #endregion
 }
