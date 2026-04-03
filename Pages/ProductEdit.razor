@@ -62,6 +62,10 @@
             <!-- 封入品グリッド -->
             <MudTable Dense="true" Hover="true" Bordered="true" Items="@s.Variants">
                 <HeaderContent>
+                    @if (!IsTemplateMode)
+                    {
+                        <MudTh>画像</MudTh>
+                    }
                     <MudTh>名前</MudTh>
                     <MudTh>キャラ</MudTh>
                     @if (!IsTemplateMode)
@@ -77,6 +81,26 @@
                     @{
                         var variant = context;
                         var rowIndex = s.Variants.IndexOf(variant);
+                    }
+
+                    @if (!IsTemplateMode)
+                    {
+                        <MudTd>
+                            <div class="d-flex flex-column" style="width:120px;">
+                                @if (!string.IsNullOrWhiteSpace(context.ImageUrl))
+                                {
+                                    <img src="@context.ImageUrl"
+                                         style="width:100px;height:100px;object-fit:cover;border-radius:4px;margin-bottom:4px;" />
+                                }
+
+                                <MudFileUpload T="IBrowserFile"
+                                               OnFilesChanged="@(async e => await OnImageSelected(e, context))"
+                                               Accept="image/*"
+                                               Variant="Variant.Outlined"
+                                               Dense="true"
+                                               Style="max-width:120px;" />
+                            </div>
+                        </MudTd>
                     }
 
                     <MudTd>
@@ -178,10 +202,30 @@
 </MudPaper>
 
 @code {
+    #region 変数
+
+    Product product = new();
+    List<VariantSourceViewModel> sources = new();
+    Series? SelectedSeries;
+    List<Series> AllSeries = new();
+    List<Character> CharacterCandidates = new();
+    string NewCharacterName = "";
+
+    #endregion
+
+    #region プロパティ
+
+    [Parameter] public Guid? Id { get; set; }
+    [Parameter] public Guid? TemplateId { get; set; }
+
+    private bool IsEditMode => Id.HasValue;
+    private bool IsTemplateMode => Nav.Uri.Contains("templates/");
+
+    #endregion
 
     /* ------------------------------
     SearchSeries
-       ------------------------------ */
+   ------------------------------ */
     private Task<IEnumerable<Series>> SearchSeries(string value, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -191,23 +235,6 @@
             AllSeries.Where(s => s.Name.Contains(value, StringComparison.OrdinalIgnoreCase))
         );
     }
-
-    /* ------------------------------
-    状態
-       ------------------------------ */
-    Product product = new();
-    List<VariantSourceViewModel> sources = new();
-    Series? SelectedSeries;
-    List<Series> AllSeries = new();
-    List<Character> CharacterCandidates = new();
-    string NewCharacterName = "";
-
-    [Parameter] public Guid? Id { get; set; }
-    [Parameter] public Guid? TemplateId { get; set; }
-
-    private bool IsEditMode => Id.HasValue;
-    private bool IsTemplateMode => Nav.Uri.Contains("templates/");
-
 
     /* ------------------------------
     初期化
@@ -283,7 +310,7 @@
                     {
                         v.Id = null;          // 新規 Insert 扱い
                         v.Owned = 0;          // 所持数は 0 に初期化
-                                              // Wanted はテンプレの値を残す（紗香さんの希望）
+                        // Wanted はテンプレの値を残す（紗香さんの希望）
                     }
                 }
             }
@@ -331,6 +358,7 @@
                     Id = v.Id,
                     Name = v.Name,
                     OrderIndex = v.OrderIndex,
+                    ImageUrl = v.ImageUrl,
                     Owned = v.Owned,
                     Wanted = v.Wanted,
                     CharacterIds = new HashSet<int>()
@@ -471,7 +499,7 @@
     private async Task SaveAll()
     {
         product.IsTemplate = IsTemplateMode;
-        
+
         // 自動採番
         for (int i = 0; i < sources.Count; i++)
             sources[i].Source.OrderIndex = i;
@@ -565,7 +593,8 @@
                         Name = v.Name,
                         OrderIndex = v.OrderIndex,
                         Owned = IsTemplateMode ? 0 : v.Owned,
-                        Wanted = v.Wanted
+                        Wanted = v.Wanted,
+                        ImageUrl = v.ImageUrl
                     };
 
                     var vResult = await Supabase.Client.From<ProductVariant>().Insert(insertVariant);
@@ -582,7 +611,8 @@
                         Name = v.Name,
                         OrderIndex = v.OrderIndex,
                         Owned = IsTemplateMode ? 0 : v.Owned,
-                        Wanted = v.Wanted
+                        Wanted = v.Wanted,
+                        ImageUrl = v.ImageUrl
                     };
 
                     await Supabase.Client.From<ProductVariant>().Update(updateVariant);
@@ -609,6 +639,38 @@
         }
 
         GoBack();
+    }
+
+    /// <summary>画像アップロード</summary>
+    /// <param name="files"></param>
+    /// <param name="variant"></param>
+    /// <returns></returns>
+    private async Task OnImageSelected(InputFileChangeEventArgs e, ProductVariantViewModel variant)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        var bytes = ms.ToArray();
+
+        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+
+        // 同期 Upload を非同期でラップ
+        await Task.Run(() =>
+        {
+            Supabase.Client.Storage
+                .From("variants")
+                .Upload(bytes, fileName);
+        });
+
+        var publicUrl = Supabase.Client.Storage
+            .From("variants")
+            .GetPublicUrl(fileName);
+
+        variant.ImageUrl = publicUrl;
     }
 
     #endregion 保存

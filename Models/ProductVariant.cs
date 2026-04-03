@@ -39,6 +39,7 @@ public class ProductVariantViewModel
     public HashSet<int> CharacterIds { get; set; } = new();
 
     public string Name { get; set; } = "";
+    public string? ImageUrl { get; set; }
     public int OrderIndex { get; set; }
     public int Owned { get; set; }
     public int Wanted { get; set; }
