@@ -137,20 +137,22 @@
              from s in vs.DefaultIfEmpty()
              join p in products on v.ProductId equals p.Id
              select new VariantListItem
-             {
-                 ProductId = p.Id,
-                 ProductTitle = p.Title,
-                 Category = p.Category,
-                 VariantName = v.Name,
-                 DisplayName = string.IsNullOrWhiteSpace(v.Name)
-                     ? p.Title
-                     : $"{p.Title} - {v.Name}",
-                 OrderIndex = v.OrderIndex,
-                 Owned = v.Owned,
-                 Wanted = v.Wanted
-             })
+                 {
+                     ProductId = p.Id,
+                     ProductTitle = p.Title,
+                     Category = p.Category,
+                     VariantName = v.Name,
+                     DisplayName = string.IsNullOrWhiteSpace(v.Name)
+                         ? p.Title
+                         : $"{p.Title} - {v.Name}",
+                     OrderIndex = v.OrderIndex,
+                     SourceOrderIndex = s?.OrderIndex ?? 0,
+                     Owned = v.Owned,
+                     Wanted = v.Wanted
+                 })
             .OrderBy(x => x.Category)
             .ThenBy(x => x.ProductTitle)
+            .ThenBy(x => x.SourceOrderIndex)
             .ThenBy(x => x.OrderIndex)
             .ToList();
     }
@@ -172,29 +174,45 @@
             return;
         }
 
-        foreach (var categoryGroup in OwnedItems.GroupBy(x => x.Category))
+        // --- カテゴリあり ---
+        foreach (var categoryGroup in OwnedItems
+            .Where(x => !string.IsNullOrWhiteSpace(x.Category))
+            .GroupBy(x => x.Category))
         {
             <MudExpansionPanel Text="@categoryGroup.Key">
-
-                @foreach (var productGroup in categoryGroup.GroupBy(x => x.ProductTitle))
-                {
-                    <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
-                             Style="border-left:4px solid #90caf9;padding-left:8px;">
-                        <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
-                            @productGroup.Key
-                        </MudLink>
-                    </MudText>
-
-                    @foreach (var item in productGroup.OrderBy(x => x.OrderIndex))
-                    {
-                        <div class="ml-4">
-                            @item.VariantName
-                            （@item.OwnedForDisplay）
-                        </div>
-                    }
-                }
-
+                @RenderProductGroups(categoryGroup)
             </MudExpansionPanel>
+        }
+
+        // --- カテゴリなし（パネルなしでそのまま表示） ---
+        var noCategoryItems = OwnedItems
+            .Where(x => string.IsNullOrWhiteSpace(x.Category));
+
+        if (noCategoryItems.Any())
+        {
+            @RenderProductGroups(noCategoryItems)
+        }
+    };
+
+    /// <summary>所持タブ表示共通処理</summary>
+    RenderFragment RenderProductGroups(IEnumerable<VariantListItem> items) => __builder =>
+    {
+        foreach (var productGroup in items.GroupBy(x => x.ProductTitle))
+        {
+            <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
+                     Style="border-left:4px solid #90caf9;padding-left:8px;">
+                <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
+                    @productGroup.Key
+                </MudLink>
+            </MudText>
+
+            @foreach (var item in productGroup.OrderBy(x => x.OrderIndex))
+            {
+                <div class="ml-4">
+                    @item.VariantName
+                    （@item.OwnedForDisplay）
+                </div>
+            }
         }
     };
 
@@ -207,29 +225,45 @@
             return;
         }
 
-        foreach (var categoryGroup in WantedItems.GroupBy(x => x.Category))
+        // --- カテゴリあり ---
+        foreach (var categoryGroup in WantedItems
+            .Where(x => !string.IsNullOrWhiteSpace(x.Category))
+            .GroupBy(x => x.Category))
         {
             <MudExpansionPanel Text="@categoryGroup.Key">
-
-                @foreach (var productGroup in categoryGroup.GroupBy(x => x.ProductTitle))
-                {
-                    <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
-                             Style="border-left:4px solid #ffb74d;padding-left:8px;">
-                        <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
-                            @productGroup.Key
-                        </MudLink>
-                    </MudText>
-
-                    @foreach (var item in productGroup.OrderBy(x => x.OrderIndex))
-                    {
-                        <div class="ml-4">
-                            @item.VariantName
-                            （@item.WantedForDisplay）
-                        </div>
-                    }
-                }
-
+                @RenderWantedProductGroups(categoryGroup)
             </MudExpansionPanel>
+        }
+
+        // --- カテゴリなし（パネルなしでそのまま表示） ---
+        var noCategoryItems = WantedItems
+            .Where(x => string.IsNullOrWhiteSpace(x.Category));
+
+        if (noCategoryItems.Any())
+        {
+            @RenderWantedProductGroups(noCategoryItems)
+        }
+    };
+
+    /// <summary>ほしいものタブ表示共通処理</summary>
+    RenderFragment RenderWantedProductGroups(IEnumerable<VariantListItem> items) => __builder =>
+    {
+        foreach (var productGroup in items.GroupBy(x => x.ProductTitle))
+        {
+            <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
+            Style="border-left:4px solid #ffb74d;padding-left:8px;">
+                <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
+                    @productGroup.Key
+                </MudLink>
+            </MudText>
+
+            @foreach (var item in productGroup.OrderBy(x => x.SourceOrderIndex).ThenBy(x => x.OrderIndex))
+            {
+                <div class="ml-4">
+                    @item.VariantName
+                    （@item.WantedForDisplay）
+                </div>
+            }
         }
     };
 
@@ -242,29 +276,45 @@
             return;
         }
 
-        foreach (var categoryGroup in TradeItems.GroupBy(x => x.Category))
+        // --- カテゴリあり ---
+        foreach (var categoryGroup in TradeItems
+            .Where(x => !string.IsNullOrWhiteSpace(x.Category))
+            .GroupBy(x => x.Category))
         {
             <MudExpansionPanel Text="@categoryGroup.Key">
-
-                @foreach (var productGroup in categoryGroup.GroupBy(x => x.ProductTitle))
-                {
-                    <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
-                             Style="border-left:4px solid #81c784;padding-left:8px;">
-                        <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
-                            @productGroup.Key
-                        </MudLink>
-                    </MudText>
-
-                    @foreach (var item in productGroup.OrderBy(x => x.OrderIndex))
-                    {
-                        <div class="ml-4">
-                            @item.VariantName
-                            （@item.TradeForDisplay）
-                        </div>
-                    }
-                }
-
+                @RenderTradeProductGroups(categoryGroup)
             </MudExpansionPanel>
+        }
+
+        // --- カテゴリなし（パネルなしでそのまま表示） ---
+        var noCategoryItems = TradeItems
+            .Where(x => string.IsNullOrWhiteSpace(x.Category));
+
+        if (noCategoryItems.Any())
+        {
+            @RenderTradeProductGroups(noCategoryItems)
+        }
+    };
+
+    /// <summary>交換用タブ表示共通処理</summary>
+    RenderFragment RenderTradeProductGroups(IEnumerable<VariantListItem> items) => __builder =>
+    {
+        foreach (var productGroup in items.GroupBy(x => x.ProductTitle))
+        {
+            <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
+                     Style="border-left:4px solid #81c784;padding-left:8px;">
+                <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
+                    @productGroup.Key
+                </MudLink>
+            </MudText>
+
+            @foreach (var item in productGroup.OrderBy(x => x.SourceOrderIndex).ThenBy(x => x.OrderIndex))
+            {
+                <div class="ml-4">
+                    @item.VariantName
+                    （@item.TradeForDisplay）
+                </div>
+            }
         }
     };
 
@@ -282,6 +332,7 @@
         public string Category { get; set; } = "";
         public string? VariantName { get; set; }
         public string DisplayName { get; set; } = "";
+        public int SourceOrderIndex { get; set; }
         public int OrderIndex { get; set; }
 
         // --- 追加 ---
