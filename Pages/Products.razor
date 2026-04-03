@@ -101,7 +101,8 @@
         // 1. 親商品
         var productQuery = Supabase.Client
             .From<Product>()
-            .Filter("is_template", Operator.Equals, false);
+            .Select("*")
+            .Filter("is_template", Operator.Equals, "false");
 
         var productResult = SelectedSeriesId.HasValue
             ? await productQuery.Filter("series_id", Operator.Equals, SelectedSeriesId.Value).Get()
@@ -147,6 +148,7 @@
                      DisplayName = string.IsNullOrWhiteSpace(v.Name)
                          ? p.Title
                          : $"{p.Title} - {v.Name}",
+                     ImageUrl = v.ImageUrl,
                      OrderIndex = v.OrderIndex,
                      SourceOrderIndex = s?.OrderIndex ?? 0,
                      Owned = v.Owned,
@@ -210,9 +212,18 @@
 
             @foreach (var item in productGroup.OrderBy(x => x.OrderIndex))
             {
-                <div class="ml-4">
-                    @item.VariantName
-                    （@item.OwnedForDisplay）
+                <div class="d-flex align-center ml-4 mb-2">
+
+                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                    {
+                        <img src="@item.ImageUrl"
+                             style="width:48px;height:48px;object-fit:cover;border-radius:4px;margin-right:8px;" />
+                    }
+
+                    <div>
+                        @item.VariantName
+                        （@item.OwnedForDisplay）
+                    </div>
                 </div>
             }
         }
@@ -253,7 +264,7 @@
         foreach (var productGroup in items.GroupBy(x => x.ProductTitle))
         {
             <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
-            Style="border-left:4px solid #ffb74d;padding-left:8px;">
+                     Style="border-left:4px solid #ffb74d;padding-left:8px;">
                 <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
                     @productGroup.Key
                 </MudLink>
@@ -261,9 +272,18 @@
 
             @foreach (var item in productGroup.OrderBy(x => x.SourceOrderIndex).ThenBy(x => x.OrderIndex))
             {
-                <div class="ml-4">
-                    @item.VariantName
-                    （@item.WantedForDisplay）
+                <div class="d-flex align-center ml-4 mb-2">
+
+                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                    {
+                        <img src="@item.ImageUrl"
+                             style="width:48px;height:48px;object-fit:cover;border-radius:4px;margin-right:8px;" />
+                    }
+
+                    <div>
+                        @item.VariantName
+                        （@item.WantedForDisplay）
+                    </div>
                 </div>
             }
         }
@@ -312,9 +332,18 @@
 
             @foreach (var item in productGroup.OrderBy(x => x.SourceOrderIndex).ThenBy(x => x.OrderIndex))
             {
-                <div class="ml-4">
-                    @item.VariantName
-                    （@item.TradeForDisplay）
+                <div class="d-flex align-center ml-4 mb-2">
+
+                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                    {
+                        <img src="@item.ImageUrl"
+                             style="width:48px;height:48px;object-fit:cover;border-radius:4px;margin-right:8px;" />
+                    }
+
+                    <div>
+                        @item.VariantName
+                        （@item.TradeForDisplay）
+                    </div>
                 </div>
             }
         }
@@ -334,9 +363,10 @@
         public string Category { get; set; } = "";
         public string? VariantName { get; set; }
         public string DisplayName { get; set; } = "";
+
         public int SourceOrderIndex { get; set; }
         public int OrderIndex { get; set; }
-
+        public string? ImageUrl { get; set; }
         // --- 追加 ---
         public int Owned { get; set; }
         public int Wanted { get; set; }
