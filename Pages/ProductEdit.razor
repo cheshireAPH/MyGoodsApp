@@ -267,7 +267,8 @@
 
                 // 作品名の選択状態を反映
                 SelectedSeries = AllSeries.FirstOrDefault(s => s.Id == product.SeriesId);
-
+                if (SelectedSeries != null)
+                    await OnSeriesChanged(SelectedSeries);
                 // ------------------------------
                 // 子商品・封入品をテンプレからコピー
                 // ------------------------------
