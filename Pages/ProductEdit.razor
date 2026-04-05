@@ -86,11 +86,11 @@
                     @if (!IsTemplateMode)
                     {
                         <MudTd>
-                            <div class="d-flex flex-column" style="width:120px;">
+                            <div class="variant-image-cell">
                                 @if (!string.IsNullOrWhiteSpace(context.ImageUrl))
                                 {
                                     <img src="@context.ImageUrl"
-                                         style="width:100px;height:100px;object-fit:cover;border-radius:4px;margin-bottom:4px;" />
+                                         style="width:100px;height:100px;object-fit:cover;border-radius:4px;" />
                                 }
 
                                 <MudFileUpload T="IBrowserFile"
@@ -126,19 +126,18 @@
                                       OnBlur="@(() => AddNewCharacter(variant))" />
                     </MudTd>
 
-                    @if (!IsTemplateMode)
-                    {
-                        <MudTd>
-                            <MudNumericField @bind-Value="context.Owned" Min="0" />
-                        </MudTd>
-                    }
-
-                    <MudTd>
-                        <MudNumericField @bind-Value="context.Wanted" Min="0" />
+                    <MudTd Class="variant-count-cell">
+                        <div class="count-wrapper">
+                            @if (!IsTemplateMode)
+                            {
+                                <MudNumericField @bind-Value="context.Owned" Min="0" Label="所持数" />
+                            }
+                            <MudNumericField @bind-Value="context.Wanted" Min="0" Label="希望数" />
+                        </div>
                     </MudTd>
 
-                    <MudTd>
-                        <div class="d-flex flex-column">
+                    <MudTd Class="variant-actions-cell">
+                        <div class="actions-wrapper">
                             <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp"
                                            Disabled="@(rowIndex == 0)"
                                            OnClick="@(() => MoveVariantUp(s, rowIndex))" />
@@ -146,14 +145,12 @@
                             <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown"
                                            Disabled="@(rowIndex == s.Variants.Count - 1)"
                                            OnClick="@(() => MoveVariantDown(s, rowIndex))" />
-                        </div>
-                    </MudTd>
 
-                    <MudTd>
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                       Color="Color.Error"
-                                       Disabled="@(s.Variants.Count == 1)"
-                                       OnClick="@(() => RemoveVariant(s, context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Disabled="@(s.Variants.Count == 1)"
+                                           OnClick="@(() => RemoveVariant(s, context))" />
+                        </div>
                     </MudTd>
                 </RowTemplate>
             </MudTable>
