@@ -223,3 +223,14 @@ code {
             width: 100%;
         }
 }
+
+.url-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.open-url-btn {
+    margin-top: 20px; /* テキストフィールドの高さに合わせる */
+}
+

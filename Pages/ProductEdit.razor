@@ -5,6 +5,7 @@
 @page "/templates/edit/{id:guid}"
 @inject SupabaseClientService Supabase
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <MudPaper Class="pa-4 mx-auto" MaxWidth="900px" Elevation="4">
 
@@ -54,7 +55,15 @@
             <MudTextField @bind-Value="s.Source.Name" Label="パック名" />
             @if (!IsTemplateMode)
             {
-                <MudTextField @bind-Value="s.Source.Url" Label="URL" />
+                <div class="url-with-icon">
+                    <MudTextField @bind-Value="s.Source.Url" Label="URL" />
+
+                    <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                   Disabled="@string.IsNullOrWhiteSpace(s.Source.Url)"
+                                   OnClick="@(() => OpenUrl(s.Source.Url))"
+                                   Color="Color.Primary"
+                                   Size="Size.Small" />
+                </div>
             }
 
             <MudDivider Class="my-2" />
@@ -455,6 +464,13 @@
         sources.RemoveAt(index);
         sources.Insert(index + 1, item);
     }
+
+    async Task OpenUrl(string? url)
+    {
+        if (!string.IsNullOrWhiteSpace(url))
+            await JS.InvokeVoidAsync("openUrl", url);
+    }
+
 
     void GoBack()
     {
