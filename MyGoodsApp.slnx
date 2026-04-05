@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="../MyGoodsApi/MyGoodsApi.csproj" Id="b3bc8412-dd3d-4b76-a63b-11925847a33c" />
   <Project Path="MyGoodsApp.csproj" />
 </Solution>

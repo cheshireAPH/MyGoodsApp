@@ -40,6 +40,7 @@ public class ProductVariantViewModel
 
     public string Name { get; set; } = "";
     public string? ImageUrl { get; set; }
+    public byte[]? TempImageBytes { get; set; }
     public int OrderIndex { get; set; }
     public int Owned { get; set; }
     public int Wanted { get; set; }

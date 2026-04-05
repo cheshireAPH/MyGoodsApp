@@ -1,0 +1,85 @@
+﻿@inherits ComponentBase
+@inject SupabaseClientService Supabase
+@inject NavigationManager Nav
+@inject HttpClient Http
+@inject IDialogService DialogService
+
+
+<MudDialog>
+
+    <MudText Typo="Typo.h6">画像編集</MudText>
+
+    <MudDivider Class="my-2" />
+
+    <img src="@Variant.ImageUrl" style="max-width:100%;border-radius:8px;" />
+
+    <MudDivider Class="my-4" />
+
+    <MudButton Variant="MudBlazor.Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="CropSquare">
+        正方形に切り抜く
+    </MudButton>
+
+    <MudButton Variant="MudBlazor.Variant.Filled" Color="MudBlazor.Color.Secondary" OnClick="Rotate90">
+        90度回転
+    </MudButton>
+
+    <MudDivider Class="my-4" />
+
+    <MudButton Variant="MudBlazor.Variant.Text" OnClick="Close">
+        閉じる
+    </MudButton>
+
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    public IDialogReference DialogReference { get; set; }
+
+    [Parameter] public ProductVariantViewModel Variant { get; set; }
+
+    async Task CropSquare()
+    {
+        // 元画像を byte[] として取得
+        var bytes = Variant.TempImageBytes ?? await Http.GetByteArrayAsync(Variant.ImageUrl);
+
+        using var image = Image.Load(bytes);
+
+        int size = Math.Min(image.Width, image.Height);
+        int x = (image.Width - size) / 2;
+        int y = (image.Height - size) / 2;
+
+        image.Mutate(ctx => ctx.Crop(new SixLabors.ImageSharp.Rectangle(x, y, size, size)));
+
+        using var ms = new MemoryStream();
+        image.SaveAsPng(ms);
+        var newBytes = ms.ToArray();
+
+        // ★ 保存前はアップロードしない
+        Variant.TempImageBytes = newBytes;
+
+        // ★ プレビュー用に Base64 をセット
+        Variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(newBytes)}";
+    }
+
+    async Task Rotate90()
+    {
+        var bytes = Variant.TempImageBytes ?? await Http.GetByteArrayAsync(Variant.ImageUrl);
+
+        using var image = Image.Load(bytes);
+
+        image.Mutate(x => x.Rotate(90));
+
+        using var ms = new MemoryStream();
+        image.SaveAsPng(ms);
+        var newBytes = ms.ToArray();
+
+        // ★ 保存前はアップロードしない
+        Variant.TempImageBytes = newBytes;
+
+        // ★ プレビュー用に Base64 をセット
+        Variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(newBytes)}";
+    }
+
+
+    void Close() => DialogReference.Close();
+}

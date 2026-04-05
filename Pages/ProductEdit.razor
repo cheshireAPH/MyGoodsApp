@@ -6,6 +6,9 @@
 @inject SupabaseClientService Supabase
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject IDialogService DialogService
+@inject HttpClient Http
+
 
 <MudPaper Class="pa-4 mx-auto" MaxWidth="900px" Elevation="4">
 
@@ -61,8 +64,13 @@
                     <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
                                    Disabled="@string.IsNullOrWhiteSpace(s.Source.Url)"
                                    OnClick="@(() => OpenUrl(s.Source.Url))"
-                                   Color="Color.Primary"
-                                   Size="Size.Small" />
+                                   Color="MudBlazor.Color.Primary"
+                                   Size="MudBlazor.Size.Small" />
+
+                    <MudIconButton Icon="@Icons.Material.Filled.ImageSearch"
+                                   OnClick="@(() => FetchImageFromUrl(s))"
+                                    Color="MudBlazor.Color.Primary"
+                                    Size="MudBlazor.Size.Small" />
                 </div>
             }
 
@@ -108,6 +116,12 @@
                                                Variant="Variant.Outlined"
                                                Dense="true"
                                                Style="max-width:120px;" />
+
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                               Color="MudBlazor.Color.Primary"
+                                               Size="MudBlazor.Size.Small"
+                                               OnClick="@(() => OpenEditDialog(context))" />
+
                             </div>
                         </MudTd>
                     }
@@ -156,7 +170,7 @@
                                            OnClick="@(() => MoveVariantDown(s, rowIndex))" />
 
                             <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                           Color="Color.Error"
+                                           Color="MudBlazor.Color.Error"
                                            Disabled="@(s.Variants.Count == 1)"
                                            OnClick="@(() => RemoveVariant(s, context))" />
                         </div>
@@ -167,7 +181,7 @@
             <!-- 封入品追加 -->
             <MudButton Class="mt-2"
                        Variant="Variant.Outlined"
-                       Color="Color.Secondary"
+                       Color="MudBlazor.Color.Secondary"
                        OnClick="@(() => AddVariant(s))">
                 ＋ 封入品追加
             </MudButton>
@@ -176,7 +190,7 @@
 
             <!-- 子商品削除 -->
             <MudButton Variant="Variant.Text"
-                       Color="Color.Error"
+                       Color="MudBlazor.Color.Error"
                        Disabled="@(sources.Count == 1)"
                        OnClick="@(() => RemoveSource(s))">
                 子商品削除
@@ -186,7 +200,7 @@
     }
 
     <MudButton Variant="Variant.Outlined"
-               Color="Color.Primary"
+               Color="MudBlazor.Color.Primary"
                OnClick="AddSource">
         ＋ 子商品追加
     </MudButton>
@@ -194,13 +208,13 @@
     <MudDivider Class="my-4" />
 
     <MudButton Variant="Variant.Filled"
-               Color="Color.Primary"
+               Color="MudBlazor.Color.Primary"
                OnClick="SaveAll">
         @(IsEditMode ? "変更を保存" : "すべて保存する")
     </MudButton>
 
     <MudButton Variant="Variant.Text"
-               Color="Color.Secondary"
+               Color="MudBlazor.Color.Secondary"
                OnClick="@(() => GoBack())">
         ← 戻る
     </MudButton>
@@ -465,12 +479,86 @@
         sources.Insert(index + 1, item);
     }
 
+    async Task OpenEditDialog(ProductVariantViewModel variant)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Variant"] = variant
+        };
+
+        var options = new DialogOptions
+        {
+            FullScreen = true,
+            CloseButton = true,
+        };
+
+        await DialogService.ShowAsync<ImageEditDialog>("画像編集", parameters, options);
+    }
+
+
     async Task OpenUrl(string? url)
     {
         if (!string.IsNullOrWhiteSpace(url))
             await JS.InvokeVoidAsync("openUrl", url);
     }
 
+    async Task FetchImageFromUrl(VariantSourceViewModel s)
+    {
+        if (string.IsNullOrWhiteSpace(s.Source.Url))
+            return;
+
+        var imageUrl = ConvertToImageUrl(s.Source.Url);
+        if (imageUrl == null)
+            return;
+
+        var response = await Http.PostAsJsonAsync(
+            "https://localhost:7127/api/ImageProxy",
+            new { url = imageUrl }
+        );
+
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+
+        // ★ 子商品に属する全ての Variant に画像を設定
+        foreach (var variant in s.Variants)
+        {
+            variant.TempImageBytes = bytes;
+            variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+        }
+    }
+
+    #region サイト別画像取得
+
+    string ConvertToImageUrl(string url)
+    {
+        if (url.Contains("movic.jp"))
+            return ConvertMovic(url);
+
+        // if (url.Contains("animate-onlineshop.jp"))
+        //     return ConvertAnimate(url);
+
+        // if (url.Contains("suruga-ya.jp"))
+        //     return ConvertSurugaya(url);
+
+        // 変換できない場合は null
+        return null;
+    }
+
+    string ConvertMovic(string url)
+    {
+        // g/ の後ろのコードを取得（先頭の g を含む場合がある）
+        var match = Regex.Match(url, @"g/([A-Za-z0-9\-]+)/?$");
+        if (!match.Success) return null;
+
+        var code = match.Groups[1].Value;
+
+        // 先頭に g が付いていたら削除
+        if (code.StartsWith("g"))
+            code = code.Substring(1);
+
+        return $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/L/{code}-l.jpg";
+    }
+
+    # endregion
 
     void GoBack()
     {
@@ -518,10 +606,8 @@
             sources[i].Source.OrderIndex = i;
 
         foreach (var s in sources)
-        {
             for (int i = 0; i < s.Variants.Count; i++)
                 s.Variants[i].OrderIndex = i;
-        }
 
         // 親商品保存
         if (product.Id == Guid.Empty)
@@ -572,27 +658,29 @@
                 savedSource = vm.Source;
             }
 
-            // 封入品削除判定
-            var existingVariants = await Supabase.Client
-                .From<ProductVariant>()
-                .Where(x => x.SourceId == savedSource.Id)
-                .Get();
-
-            var existingVariantIds = existingVariants.Models.Select(x => x.Id).ToHashSet();
-            var currentVariantIds = vm.Variants
-                .Where(v => v.Id.HasValue)
-                .Select(v => v.Id!.Value)
-                .ToHashSet();
-
-            foreach (var delId in existingVariantIds.Except(currentVariantIds))
+            // まず全 Variant を Insert/Update する前に画像アップロードを済ませる
+            foreach (var v in vm.Variants)
             {
-                await Supabase.Client
-                    .From<ProductVariant>()
-                    .Where(x => x.Id == delId)
-                    .Delete();
+                if (v.TempImageBytes != null)
+                {
+                    var bucket = Supabase.Client.Storage.From("variants");
+                    var fileName = $"{v.Id ?? Guid.NewGuid()}.png";
+
+                    // 既存削除
+                    await bucket.Remove(fileName);
+
+                    // アップロード
+                    await bucket.Upload(v.TempImageBytes, fileName);
+
+                    // URL セット
+                    v.ImageUrl = bucket.GetPublicUrl(fileName);
+
+                    // 一時データクリア
+                    v.TempImageBytes = null;
+                }
             }
 
-            // 封入品 Insert/Update
+            // Insert/Update（画像URLも含めて1回で保存）
             foreach (var v in vm.Variants)
             {
                 ProductVariant savedVariant;
@@ -649,10 +737,31 @@
                     );
                 }
             }
+
+            // Insert/Update が全て終わった後に削除判定
+            var existingVariants = await Supabase.Client
+                .From<ProductVariant>()
+                .Where(x => x.SourceId == savedSource.Id)
+                .Get();
+
+            var existingVariantIds = existingVariants.Models.Select(x => x.Id).ToHashSet();
+            var currentVariantIds = vm.Variants
+                .Where(v => v.Id.HasValue)
+                .Select(v => v.Id!.Value)
+                .ToHashSet();
+
+            foreach (var delId in existingVariantIds.Except(currentVariantIds))
+            {
+                await Supabase.Client
+                    .From<ProductVariant>()
+                    .Where(x => x.Id == delId)
+                    .Delete();
+            }
         }
 
         GoBack();
     }
+
 
     /// <summary>画像アップロード</summary>
     /// <param name="e"></param>
@@ -668,17 +777,11 @@
         await stream.CopyToAsync(ms);
         var bytes = ms.ToArray();
 
-        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+        // ★ 保存前はアップロードしない
+        variant.TempImageBytes = bytes;
 
-        var bucket = Supabase.Client.Storage.From("variants");
-
-        // ★ 正しい非同期アップロード
-        await bucket.Upload(bytes, fileName);
-
-        // ★ 公開URLを取得
-        var publicUrl = bucket.GetPublicUrl(fileName);
-
-        variant.ImageUrl = publicUrl;
+        // ★ プレビュー用に Base64 URL をセット
+        variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
     }
 
     #endregion 保存

@@ -9,7 +9,7 @@
     </MudText>
 
     <MudButton Variant="Variant.Filled"
-               Color="Color.Primary"
+               Color="MudBlazor.Color.Primary"
                OnClick="@CreateNewTemplate">
         ＋ 新規テンプレ作成
     </MudButton>
@@ -28,19 +28,19 @@
             <MudTd>@GetSeriesName(context.SeriesId)</MudTd>
             <MudTd>
                 <MudButton Variant="Variant.Text"
-                           Color="Color.Secondary"
+                           Color="MudBlazor.Color.Secondary"
                            OnClick="@(() => UseTemplate(context.Id))">
                     使用
                 </MudButton>
 
                 <MudButton Variant="Variant.Text"
-                           Color="Color.Primary"
+                           Color="MudBlazor.Color.Primary"
                            OnClick="@(() => EditTemplate(context.Id))">
                     編集
                 </MudButton>
 
                 <MudButton Variant="Variant.Text"
-                           Color="Color.Error"
+                           Color="MudBlazor.Color.Error"
                            OnClick="@(() => DeleteTemplate(context.Id))">
                     削除
                 </MudButton>

@@ -8,7 +8,7 @@
     <MudText Typo="Typo.h5" Class="mb-4">作品マスタ管理</MudText>
 
     <MudButton Variant="Variant.Filled"
-               Color="Color.Primary"
+               Color="MudBlazor.Color.Primary"
                OnClick="AddSeriesDialog">
         ＋ 新規作品追加
     </MudButton>
@@ -25,19 +25,19 @@
             <MudTd>@item.Name</MudTd>
             <MudTd>
                 <MudButton Variant="Variant.Text"
-                           Color="Color.Info"
+                           Color="MudBlazor.Color.Info"
                            OnClick="@(() => Nav.NavigateTo($"characters/{item.Id}"))">
                     キャラ一覧
                 </MudButton>
 
                 <MudButton Variant="Variant.Text"
-                           Color="Color.Primary"
+                           Color="MudBlazor.Color.Primary"
                            OnClick="@(() => EditSeriesDialog(item))">
                     編集
                 </MudButton>
 
                 <MudButton Variant="Variant.Text"
-                           Color="Color.Error"
+                           Color="MudBlazor.Color.Error"
                            OnClick="@(() => DeleteSeriesDialog(item))">
                     削除
                 </MudButton>

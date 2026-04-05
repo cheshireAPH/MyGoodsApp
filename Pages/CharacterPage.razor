@@ -8,7 +8,7 @@
     <MudText Typo="Typo.h5" Class="mb-4">キャラ一覧</MudText>
 
     <MudButton Variant="Variant.Filled"
-               Color="Color.Primary"
+               Color="MudBlazor.Color.Primary"
                OnClick="AddCharacterDialog">
         ＋ 新規キャラ追加
     </MudButton>
@@ -23,13 +23,13 @@
             <MudTd>@item.Name</MudTd>
             <MudTd>
                 <MudButton Variant="Variant.Text"
-                           Color="Color.Primary"
+                           Color="MudBlazor.Color.Primary"
                            OnClick="@(() => EditCharacterDialog(item))">
                     編集
                 </MudButton>
 
                 <MudButton Variant="Variant.Text"
-                           Color="Color.Error"
+                           Color="MudBlazor.Color.Error"
                            OnClick="@(() => DeleteCharacter(item))">
                     削除
                 </MudButton>
@@ -38,7 +38,7 @@
     </MudTable>
 
     <MudButton Variant="Variant.Text"
-               Color="Color.Secondary"
+               Color="MudBlazor.Color.Secondary"
                Class="mt-4"
                OnClick="@(() => Nav.NavigateTo("series"))">
         ← 作品一覧へ戻る
