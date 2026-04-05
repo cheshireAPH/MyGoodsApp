@@ -1,5 +1,5 @@
-﻿@page "/"
-@page "/products"
+﻿@page "/products"
+@page "/products/{SeriesId:int}"
 @inject SupabaseClientService Supabase
 @inject NavigationManager Nav
 
@@ -7,21 +7,12 @@
 
     <MudText Typo="Typo.h5" Class="mb-4">商品一覧</MudText>
 
-    <!-- 作品一覧（タップで絞り込み） -->
-    <MudChipSet T="int?"
-                SelectedValue="@SelectedSeriesId"
-                SelectedValueChanged="OnSeriesChanged"
-                Mandatory="false" Color="Color.Primary"
-                SelectedColor="Color.Secondary"
-                Class="mb-4">
+    <MudButton Variant="Variant.Text" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.ArrowBack"
+               OnClick="@(() => Nav.NavigateTo("series"))">
+        ←戻る
+    </MudButton>
 
-        <MudChip Value="@((int?)null)">すべて</MudChip>
-
-        @foreach (var s in AllSeries)
-        {
-            <MudChip Value="@((int?)s.Id)">@s.Name</MudChip>
-        }
-    </MudChipSet>
 
     <!-- 商品一覧切り替えタブ -->
     <MudTabs @bind-ActivePanelIndex="ActiveTab" Class="mb-4">
@@ -56,6 +47,9 @@
 
     #region プロパティ
 
+    [Parameter]
+    public int? SeriesId { get; set; }
+
     /// <summary>所持タブ表示</summary>
     private IEnumerable<VariantListItem> OwnedItems =>
     VariantItems!
@@ -80,6 +74,10 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadSeries();
+
+        if (SeriesId.HasValue)
+            SelectedSeriesId = SeriesId;
+
         await LoadVariantList();
     }
 

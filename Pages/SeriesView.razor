@@ -1,0 +1,39 @@
+﻿@page "/"
+@page "/series"
+@inject SupabaseClientService Supabase
+@inject NavigationManager Nav
+
+<MudPaper Class="pa-4 mx-auto" MaxWidth="900px">
+
+    <MudText Typo="Typo.h5" Class="mb-4">作品一覧</MudText>
+
+    @if (SeriesList == null)
+    {
+        <MudProgressCircular Indeterminate="true" />
+    }
+    else
+    {
+        @foreach (var s in SeriesList)
+        {
+            <MudCard Class="mb-2" Style="padding:12px;"
+                     @onclick="@(() => Nav.NavigateTo($"products/{s.Id}"))">
+                <MudText Typo="Typo.subtitle1">@s.Name</MudText>
+            </MudCard>
+        }
+    }
+
+</MudPaper>
+
+@code {
+    List<Models.Series>? SeriesList;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Supabase.Client
+            .From<Models.Series>()
+            .Order(x => x.Name, Ordering.Ascending)
+            .Get();
+
+        SeriesList = result.Models;
+    }
+}

@@ -1,4 +1,4 @@
-﻿@page "/series"
+﻿@page "/seriesPage"
 @inject NavigationManager Nav
 @inject SupabaseClientService Supabase
 @inject IDialogService Dialog
@@ -71,7 +71,7 @@
     {
         var parameters = new DialogParameters
         {
-            { "Series", new Series() }
+            { "Series", new SeriesView() }
         };
 
         var dialog = await Dialog.ShowAsync<MyGoodsApp.Pages.SeriesEditDialog>(
