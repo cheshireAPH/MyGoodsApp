@@ -642,7 +642,7 @@
     }
 
     /// <summary>画像アップロード</summary>
-    /// <param name="files"></param>
+    /// <param name="e"></param>
     /// <param name="variant"></param>
     /// <returns></returns>
     private async Task OnImageSelected(InputFileChangeEventArgs e, ProductVariantViewModel variant)
@@ -651,24 +651,19 @@
         if (file == null) return;
 
         using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
-
         using var ms = new MemoryStream();
         await stream.CopyToAsync(ms);
         var bytes = ms.ToArray();
 
         var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
 
-        // 同期 Upload を非同期でラップ
-        await Task.Run(() =>
-        {
-            Supabase.Client.Storage
-                .From("variants")
-                .Upload(bytes, fileName);
-        });
+        var bucket = Supabase.Client.Storage.From("variants");
 
-        var publicUrl = Supabase.Client.Storage
-            .From("variants")
-            .GetPublicUrl(fileName);
+        // ★ 正しい非同期アップロード
+        await bucket.Upload(bytes, fileName);
+
+        // ★ 公開URLを取得
+        var publicUrl = bucket.GetPublicUrl(fileName);
 
         variant.ImageUrl = publicUrl;
     }
