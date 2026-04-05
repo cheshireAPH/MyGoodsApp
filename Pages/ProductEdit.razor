@@ -481,6 +481,16 @@
 
     async Task OpenEditDialog(ProductVariantViewModel variant)
     {
+        // ① TempImageBytes が無い場合は URL から画像を取得
+        if (variant.TempImageBytes == null && !string.IsNullOrWhiteSpace(variant.ImageUrl))
+        {
+            var bytes = await Http.GetByteArrayAsync(variant.ImageUrl);
+            variant.TempImageBytes = bytes;
+
+            // ② Base64 に変換して ImageUrl を差し替える
+            variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+        }
+
         var parameters = new DialogParameters
         {
             ["Variant"] = variant
