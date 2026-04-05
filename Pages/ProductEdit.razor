@@ -511,10 +511,18 @@
         if (imageUrl == null)
             return;
 
-        var response = await Http.PostAsJsonAsync(
-            "https://localhost:7127/api/ImageProxy",
+        var http = new HttpClient();
+        var response = await http.PostAsJsonAsync(
+            "https://mygoodsapi.onrender.com/api/ImageProxy",
             new { url = imageUrl }
         );
+
+        // ★ ここが重要：失敗したら return
+        if (!response.IsSuccessStatusCode)
+        {
+            Console.WriteLine($"API error: {response.StatusCode}");
+            return;
+        }
 
         var bytes = await response.Content.ReadAsByteArrayAsync();
 
