@@ -481,14 +481,33 @@
 
     async Task OpenEditDialog(ProductVariantViewModel variant)
     {
-        // ① TempImageBytes が無い場合は URL から画像を取得
-        if (variant.TempImageBytes == null && !string.IsNullOrWhiteSpace(variant.ImageUrl))
+        if (variant == null)
         {
-            var bytes = await Http.GetByteArrayAsync(variant.ImageUrl);
-            variant.TempImageBytes = bytes;
+            Console.WriteLine("Variant が null");
+            return;
+        }
 
-            // ② Base64 に変換して ImageUrl を差し替える
-            variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+        if (string.IsNullOrWhiteSpace(variant.ImageUrl))
+        {
+            Console.WriteLine("ImageUrl が空");
+            return;
+        }
+
+        // ★ URL → Base64 変換
+        if (variant.TempImageBytes == null &&
+            !variant.ImageUrl.StartsWith("data:"))
+        {
+            try
+            {
+                var bytes = await Http.GetByteArrayAsync(variant.ImageUrl);
+                variant.TempImageBytes = bytes;
+                variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("画像読み込み失敗: " + ex.Message);
+                return; // ★ ここが重要
+            }
         }
 
         var parameters = new DialogParameters
@@ -504,6 +523,7 @@
 
         await DialogService.ShowAsync<ImageEditDialog>("画像編集", parameters, options);
     }
+
 
 
     async Task OpenUrl(string? url)
