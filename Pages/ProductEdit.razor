@@ -87,11 +87,13 @@
                     <MudTh>キャラ</MudTh>
                     @if (!IsTemplateMode)
                     {
-                        <MudTh>所持</MudTh>
+                        <MudTh>所持数/希望数</MudTh>
                     }
-                    <MudTh>希望</MudTh>
-                    <MudTh>順番</MudTh>
-                    <MudTh>削除</MudTh>
+                    else
+                    {
+                        <MudTh>希望数</MudTh>
+                    }
+                    <MudTh>順番/削除</MudTh>
                 </HeaderContent>
 
                 <RowTemplate>

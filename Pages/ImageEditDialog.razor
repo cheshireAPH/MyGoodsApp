@@ -2,6 +2,7 @@
 @inject NavigationManager Nav
 @inject HttpClient Http
 @inject IDialogService DialogService
+@inject IJSRuntime JS
 
 <MudDialog>
     <DialogContent>
@@ -16,59 +17,120 @@
         {
             <MudDivider Class="my-2" />
 
-            <img src="@Variant.ImageUrl" style="max-width:100%;border-radius:8px;" />
+            <div id="crop-container">
+                <img id="edit-image" src="@Variant.ImageUrl" />
+
+                <div id="crop-frame" class="@GetCropFrameClass()">
+                    <div id="crop-handle"></div>
+                </div>
+            </div>
 
             <MudDivider Class="my-4" />
 
-            <MudButton Variant="MudBlazor.Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="CropSquare">
-                正方形に切り抜く
-            </MudButton>
+            <MudStack Row Justify="Justify.SpaceEvenly" Class="pa-3">
 
-            <MudButton Variant="MudBlazor.Variant.Filled" Color="MudBlazor.Color.Secondary" OnClick="Rotate90">
-                90度回転
-            </MudButton>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                               OnClick="Reset"
+                               Color="MudBlazor.Color.Default" />
+
+                <MudIconButton Icon="@Icons.Material.Filled.RotateRight"
+                               OnClick="Rotate90"
+                               Color="MudBlazor.Color.Default" />
+
+                <MudIconButton Icon="@GetShapeIcon()"
+                               OnClick="ToggleShape"
+                               Color="MudBlazor.Color.Default" />
+
+                <MudIconButton Icon="@(AspectLocked? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
+                               OnClick="ToggleAspectLock"
+                               Color="MudBlazor.Color.Default" />
+
+            </MudStack>
         }
 
     </DialogContent>
 
     <DialogActions>
         <MudButton Variant="MudBlazor.Variant.Text" OnClick="Close">
-            閉じる
+            キャンセル
+        </MudButton>
+
+        <MudButton Variant="MudBlazor.Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="ApplyCrop">
+            OK
         </MudButton>
     </DialogActions>
 </MudDialog>
 
 
 @code {
+
+    #region 定数
+
+    enum CropShape { Rectangle, Square, Circle }
+
+    #endregion
+
+    #region 変数
+
+    CropShape CurrentShape = CropShape.Rectangle;
+    bool AspectLocked = false;
+
+    #endregion
+
+    #region プロパティ
+
     [CascadingParameter]
     public IDialogReference DialogReference { get; set; }
 
     [Parameter] public ProductVariantViewModel Variant { get; set; }
 
-    async Task CropSquare()
+    public class CropFrame
     {
-        // 元画像を byte[] として取得
-        var bytes = Variant.TempImageBytes ?? await Http.GetByteArrayAsync(Variant.ImageUrl);
-
-        using var image = Image.Load(bytes);
-
-        int size = Math.Min(image.Width, image.Height);
-        int x = (image.Width - size) / 2;
-        int y = (image.Height - size) / 2;
-
-        image.Mutate(ctx => ctx.Crop(new SixLabors.ImageSharp.Rectangle(x, y, size, size)));
-
-        using var ms = new MemoryStream();
-        image.SaveAsPng(ms);
-        var newBytes = ms.ToArray();
-
-        // ★ 保存前はアップロードしない
-        Variant.TempImageBytes = newBytes;
-
-        // ★ プレビュー用に Base64 をセット
-        Variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(newBytes)}";
+        public int x { get; set; }
+        public int y { get; set; }
+        public int width { get; set; }
+        public int height { get; set; }
     }
 
+    #endregion
+
+    #region メソッド
+
+    /// <summary>トリミング形状</summary>
+    string GetCropFrameClass() => CurrentShape switch
+    {
+        CropShape.Circle => "circle",
+        _ => ""
+    };
+
+    /// <summary>形状アイコン</summary>
+    string GetShapeIcon() => CurrentShape switch
+    {
+        CropShape.Rectangle => Icons.Material.Filled.Crop,
+        CropShape.Square => Icons.Material.Filled.CropSquare,
+        CropShape.Circle => Icons.Material.Filled.Circle,
+        _ => Icons.Material.Filled.Crop
+    };
+
+    /// <summary>形状変更</summary>
+    void ToggleShape()
+    {
+        CurrentShape = CurrentShape switch
+        {
+            CropShape.Rectangle => CropShape.Square,
+            CropShape.Square => CropShape.Circle,
+            CropShape.Circle => CropShape.Rectangle,
+            _ => CropShape.Rectangle
+        };
+    }
+
+    /// <summary>比率ロック</summary>
+    void ToggleAspectLock()
+    {
+        AspectLocked = !AspectLocked;
+    }
+
+    /// <summary>90度回転</summary>
     async Task Rotate90()
     {
         var bytes = Variant.TempImageBytes ?? await Http.GetByteArrayAsync(Variant.ImageUrl);
@@ -88,6 +150,47 @@
         Variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(newBytes)}";
     }
 
+    async Task ApplyCrop()
+    {
+        var frame = await JS.InvokeAsync<CropFrame>("cropper.getFrame");
+
+        var bytes = Variant.TempImageBytes ?? await Http.GetByteArrayAsync(Variant.ImageUrl);
+
+        using var image = Image.Load(bytes);
+
+        image.Mutate(x => x.Crop(new SixLabors.ImageSharp.Rectangle(frame.x, frame.y, frame.width, frame.height)));
+
+        using var ms = new MemoryStream();
+        image.SaveAsPng(ms);
+        var newBytes = ms.ToArray();
+
+        Variant.TempImageBytes = newBytes;
+        Variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(newBytes)}";
+    }
+
+    void Reset()
+    {
+        if (Variant?.TempImageBytes != null)
+        {
+            // TempImageBytes を初期状態に戻す
+            Variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(Variant.TempImageBytes)}";
+        }
+    }
 
     void Close() => DialogReference.Close();
+
+    #endregion
+
+    #region イベント
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("cropper.init");
+        }
+    }
+
+    #endregion
+
 }
