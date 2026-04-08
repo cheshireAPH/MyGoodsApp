@@ -269,4 +269,12 @@ code {
     cursor: se-resize;
 }
 
+#crop-container,
+#crop-frame,
+#crop-handle {
+    pointer-events: auto !important;
+    touch-action: none;
+    z-index: 9999;
+}
+
 
