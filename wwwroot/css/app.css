@@ -277,4 +277,16 @@ code {
     z-index: 9999;
 }
 
+.mud-dialog-content {
+    overflow: visible !important;
+}
+
+#crop-frame {
+    z-index: 10;
+}
+
+#crop-handle {
+    z-index: 11;
+}
+
 
