@@ -138,11 +138,25 @@ window.cropper = {
 
     getFrame: function () {
         const frame = document.getElementById("crop-frame");
+        const image = document.getElementById("edit-image");
+
+        // 表示サイズ
+        const displayWidth = image.clientWidth;
+        const displayHeight = image.clientHeight;
+
+        // 実際の画像サイズ
+        const naturalWidth = image.naturalWidth;
+        const naturalHeight = image.naturalHeight;
+
+        // スケール係数
+        const scaleX = naturalWidth / displayWidth;
+        const scaleY = naturalHeight / displayHeight;
+
         return {
-            x: frame.offsetLeft,
-            y: frame.offsetTop,
-            width: frame.offsetWidth,
-            height: frame.offsetHeight
+            x: frame.offsetLeft * scaleX,
+            y: frame.offsetTop * scaleY,
+            width: frame.offsetWidth * scaleX,
+            height: frame.offsetHeight * scaleY
         };
     }
 };
