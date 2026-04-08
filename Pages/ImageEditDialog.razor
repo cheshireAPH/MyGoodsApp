@@ -20,7 +20,10 @@
 
 
                 <div id="crop-frame" class="@GetCropFrameClass()">
-                    <div id="crop-handle"></div>
+                    <div class="handle handle-nw"></div>
+                    <div class="handle handle-ne"></div>
+                    <div class="handle handle-sw"></div>
+                    <div class="handle handle-se"></div>
                 </div>
             </div>
 
@@ -40,9 +43,12 @@
                                OnClick="ToggleShape"
                                Color="MudBlazor.Color.Default" />
 
-                <MudIconButton Icon="@(AspectLocked? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
-                               OnClick="ToggleAspectLock"
-                               Color="MudBlazor.Color.Default" />
+                @if (CurrentShape == CropShape.Rectangle)
+                {
+                    <MudIconButton Icon="@(AspectLocked? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
+                                   OnClick="ToggleAspectLock"
+                                   Color="MudBlazor.Color.Default" />
+                }
 
             </MudStack>
         }
@@ -121,6 +127,8 @@
             CropShape.Circle => CropShape.Rectangle,
             _ => CropShape.Rectangle
         };
+
+        JS.InvokeVoidAsync("cropper.setShape", CurrentShape.ToString().ToLower());
     }
 
     /// <summary>比率ロック</summary>

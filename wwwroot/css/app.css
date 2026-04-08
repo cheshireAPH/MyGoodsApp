@@ -253,24 +253,48 @@ code {
 
 #crop-frame {
     position: absolute;
-    border: 2px solid #fff;
+    border: 2px dashed var(--mud-palette-primary);
     box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
-    cursor: move;
+    pointer-events: none; /* ← 枠本体は触らせない */
 }
 
     #crop-frame.circle {
         border-radius: 50%;
     }
 
-/* ===== リサイズ用ハンドル ===== */
+    /* ===== 四隅ハンドル ===== */
 
-#crop-handle {
-    position: absolute;
-    width: 20px;
-    height: 20px;
+    #crop-frame .handle {
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        background: var(--mud-palette-primary);
+        border-radius: 50%;
+        border: 2px solid white;
+        pointer-events: auto; /* ← ハンドルだけ触れる */
+    }
+
+/* 位置とカーソル */
+.handle-nw {
+    left: -10px;
+    top: -10px;
+    cursor: nw-resize;
+}
+
+.handle-ne {
+    right: -10px;
+    top: -10px;
+    cursor: ne-resize;
+}
+
+.handle-sw {
+    left: -10px;
+    bottom: -10px;
+    cursor: sw-resize;
+}
+
+.handle-se {
     right: -10px;
     bottom: -10px;
-    background: #fff;
-    border-radius: 4px;
     cursor: se-resize;
 }
