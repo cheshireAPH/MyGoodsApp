@@ -16,7 +16,8 @@
             <MudDivider Class="my-2" />
 
             <div id="crop-container">
-                <img id="edit-image" src="@Variant.ImageUrl" />
+                <img id="edit-image" src="@Variant.ImageUrl" onload="cropper.init()" />
+
 
                 <div id="crop-frame" class="@GetCropFrameClass()">
                     <div id="crop-handle"></div>
@@ -181,13 +182,7 @@
 
     #region イベント
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("cropper.init");
-        }
-    }
+
 
     #endregion
 
