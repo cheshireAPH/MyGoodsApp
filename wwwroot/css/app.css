@@ -234,6 +234,8 @@ code {
     margin-top: 20px; /* テキストフィールドの高さに合わせる */
 }
 
+/* ===== Cropper 基本レイアウト ===== */
+
 #crop-container {
     position: relative;
     width: 100%;
@@ -247,6 +249,8 @@ code {
     display: block;
 }
 
+/* ===== トリミング枠 ===== */
+
 #crop-frame {
     position: absolute;
     border: 2px solid #fff;
@@ -258,6 +262,8 @@ code {
         border-radius: 50%;
     }
 
+/* ===== リサイズ用ハンドル ===== */
+
 #crop-handle {
     position: absolute;
     width: 20px;
@@ -268,25 +274,3 @@ code {
     border-radius: 4px;
     cursor: se-resize;
 }
-
-#crop-container,
-#crop-frame,
-#crop-handle {
-    pointer-events: auto !important;
-    touch-action: none;
-    z-index: 9999;
-}
-
-.mud-dialog-content {
-    overflow: visible !important;
-}
-
-#crop-frame {
-    z-index: 10;
-}
-
-#crop-handle {
-    z-index: 11;
-}
-
-

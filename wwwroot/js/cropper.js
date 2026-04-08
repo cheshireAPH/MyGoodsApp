@@ -10,7 +10,7 @@ window.cropper = {
         let startX, startY, startW, startH;
 
         // ============================
-        // 初期位置・サイズを中央に配置
+        // 初期位置
         // ============================
         const initSize = Math.min(container.clientWidth, container.clientHeight) * 0.6;
         frame.style.width = initSize + "px";
@@ -19,7 +19,7 @@ window.cropper = {
         frame.style.top = (container.clientHeight - initSize) / 2 + "px";
 
         // ============================
-        // 枠ドラッグ
+        // PC: ドラッグ開始
         // ============================
         frame.addEventListener("mousedown", e => {
             dragging = true;
@@ -28,7 +28,17 @@ window.cropper = {
         });
 
         // ============================
-        // リサイズ開始
+        // スマホ: ドラッグ開始
+        // ============================
+        frame.addEventListener("touchstart", e => {
+            dragging = true;
+            const t = e.touches[0];
+            startX = t.clientX - frame.offsetLeft;
+            startY = t.clientY - frame.offsetTop;
+        });
+
+        // ============================
+        // PC: リサイズ開始
         // ============================
         handle.addEventListener("mousedown", e => {
             e.stopPropagation();
@@ -40,40 +50,48 @@ window.cropper = {
         });
 
         // ============================
-        // マウス移動
+        // スマホ: リサイズ開始
         // ============================
-        document.addEventListener("mousemove", e => {
-            if (dragging) {
-                let newLeft = e.clientX - startX;
-                let newTop = e.clientY - startY;
-
-                // 枠が外に出ないように制限
-                newLeft = Math.max(0, Math.min(newLeft, container.clientWidth - frame.offsetWidth));
-                newTop = Math.max(0, Math.min(newTop, container.clientHeight - frame.offsetHeight));
-
-                frame.style.left = newLeft + "px";
-                frame.style.top = newTop + "px";
-            }
-
-            if (resizing) {
-                let newW = startW + (e.clientX - startX);
-                let newH = startH + (e.clientY - startY);
-
-                // 最小サイズ
-                newW = Math.max(50, newW);
-                newH = Math.max(50, newH);
-
-                // 枠が外に出ないように制限
-                newW = Math.min(newW, container.clientWidth - frame.offsetLeft);
-                newH = Math.min(newH, container.clientHeight - frame.offsetTop);
-
-                frame.style.width = newW + "px";
-                frame.style.height = newH + "px";
-            }
+        handle.addEventListener("touchstart", e => {
+            e.stopPropagation();
+            resizing = true;
+            const t = e.touches[0];
+            startX = t.clientX;
+            startY = t.clientY;
+            startW = frame.offsetWidth;
+            startH = frame.offsetHeight;
         });
 
         // ============================
-        // マウス終了
+        // PC: 移動・リサイズ
+        // ============================
+        document.addEventListener("mousemove", e => {
+            moveOrResize(e.clientX, e.clientY);
+        });
+
+        // ============================
+        // スマホ: 移動・リサイズ
+        // ============================
+        document.addEventListener("touchmove", e => {
+            if (e.touches.length === 1) {
+                const t = e.touches[0];
+                moveOrResize(t.clientX, t.clientY);
+            }
+        });
+
+        function moveOrResize(x, y) {
+            if (dragging) {
+                frame.style.left = (x - startX) + "px";
+                frame.style.top = (y - startY) + "px";
+            }
+            if (resizing) {
+                frame.style.width = (startW + (x - startX)) + "px";
+                frame.style.height = (startH + (y - startY)) + "px";
+            }
+        }
+
+        // ============================
+        // PC: 終了
         // ============================
         document.addEventListener("mouseup", () => {
             dragging = false;
@@ -81,7 +99,15 @@ window.cropper = {
         });
 
         // ============================
-        // ピンチイン・アウトで画像拡大縮小
+        // スマホ: 終了
+        // ============================
+        document.addEventListener("touchend", () => {
+            dragging = false;
+            resizing = false;
+        });
+
+        // ============================
+        // ピンチズーム（既存）
         // ============================
         let scale = 1;
         let lastDistance = 0;
@@ -97,7 +123,7 @@ window.cropper = {
                 if (lastDistance !== 0) {
                     const diff = distance - lastDistance;
                     scale += diff * 0.005;
-                    scale = Math.max(0.5, Math.min(scale, 4)); // ズーム範囲
+                    scale = Math.max(0.5, Math.min(scale, 4));
                     image.style.transform = `scale(${scale})`;
                 }
 
@@ -110,9 +136,6 @@ window.cropper = {
         });
     },
 
-    // ============================
-    // 枠の位置とサイズを返す
-    // ============================
     getFrame: function () {
         const frame = document.getElementById("crop-frame");
         return {
