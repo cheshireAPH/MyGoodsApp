@@ -135,6 +135,7 @@
     void ToggleAspectLock()
     {
         AspectLocked = !AspectLocked;
+        JS.InvokeVoidAsync("cropper.setAspectLocked", AspectLocked);
     }
 
     /// <summary>90度回転</summary>
@@ -184,13 +185,20 @@
         }
     }
 
-    void Close() => DialogReference.Close();
+    void Close() => DialogReference?.Close();
 
     #endregion
 
     #region イベント
 
-
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("cropper.setShape", CurrentShape.ToString().ToLower());
+            await JS.InvokeVoidAsync("cropper.setAspectLock", AspectLocked);
+        }
+    }
 
     #endregion
 
