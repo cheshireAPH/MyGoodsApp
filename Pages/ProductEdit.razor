@@ -483,18 +483,6 @@
 
     async Task OpenEditDialog(ProductVariantViewModel variant)
     {
-        if (variant == null)
-        {
-            Console.WriteLine("Variant が null");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(variant.ImageUrl))
-        {
-            Console.WriteLine("ImageUrl が空");
-            return;
-        }
-
         // ★ URL → Base64 変換
         if (variant.TempImageBytes == null &&
             !variant.ImageUrl.StartsWith("data:"))
@@ -523,7 +511,7 @@
             CloseButton = true,
         };
 
-        await DialogService.ShowAsync<ImageEditDialog>("画像編集", parameters, options);
+        var dialog = await DialogService.ShowAsync<ImageEditDialog>("画像編集", parameters, options);
     }
 
 
