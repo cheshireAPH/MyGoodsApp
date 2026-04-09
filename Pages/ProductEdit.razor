@@ -340,12 +340,12 @@
             {
                 // 通常の新規作成
                 sources = new()
-        {
-            new VariantSourceViewModel
-            {
-                Variants = new() { new ProductVariantViewModel() }
-            }
-        };
+                {
+                    new VariantSourceViewModel
+                    {
+                        Variants = new() { new ProductVariantViewModel() }
+                    }
+                };
             }
         }
     }
@@ -500,18 +500,32 @@
             }
         }
 
+        var options = new DialogOptions
+        {
+            CloseButton = false,
+            FullScreen = true
+        };
+
         var parameters = new DialogParameters
         {
             ["Variant"] = variant
         };
 
-        var options = new DialogOptions
-        {
-            FullScreen = true,
-            CloseButton = true,
-        };
-
         var dialog = await DialogService.ShowAsync<ImageEditDialog>("画像編集", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            // ★ ここで画像データを受け取る
+            var editedBytes = result.Data as byte[];
+
+            if (editedBytes != null)
+            {
+                variant.TempImageBytes = editedBytes;
+                variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(editedBytes)}";
+            }
+        }
+
     }
 
 

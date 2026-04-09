@@ -17,8 +17,7 @@ namespace MyGoodsApp.Pages
         [Inject] public IJSRuntime JS { get; set; }
         [Inject] public HttpClient Http { get; set; }
 
-        [CascadingParameter] public IDialogReference DialogReference { get; set; }
-
+        [CascadingParameter] public IDialogReference? DialogReference { get; set; }
         [Parameter] public ProductVariantViewModel Variant { get; set; }
 
         public class CropFrame
@@ -107,27 +106,38 @@ namespace MyGoodsApp.Pages
         {
             var frame = await JS.InvokeAsync<CropFrame>("cropper.getFrame");
 
+            // ★ ソース画像を必ず確保
+            var sourceBytes = Variant.TempImageBytes
+                              ?? await Http.GetByteArrayAsync(Variant.ImageUrl);
+
             if (CurrentShape == CropShape.Circle)
             {
                 Variant.TempImageBytes = CropCircle(
-                    Variant.TempImageBytes,
+                    sourceBytes,
                     frame.X, frame.Y, frame.Width, frame.Height
                 );
             }
             else
             {
                 Variant.TempImageBytes = CropRectangle(
-                    Variant.TempImageBytes,
+                    sourceBytes,
                     frame.X, frame.Y, frame.Width, frame.Height
                 );
             }
 
-            DialogReference?.Close(DialogResult.Ok(Variant));
+            DialogReference?.Close(DialogResult.Ok(Variant.TempImageBytes));
         }
 
         byte[] CropRectangle(byte[] originalBytes, int x, int y, int w, int h)
         {
             using var image = Image.Load<Rgba32>(originalBytes);
+
+            if (x < 0) x = 0;
+            if (y < 0) y = 0;
+            if (w <= 0 || h <= 0) return originalBytes;
+
+            if (x + w > image.Width) w = image.Width - x;
+            if (y + h > image.Height) h = image.Height - y;
 
             var rect = new Rectangle(x, y, w, h);
 
@@ -141,6 +151,13 @@ namespace MyGoodsApp.Pages
         byte[] CropCircle(byte[] originalBytes, int x, int y, int w, int h)
         {
             using var image = Image.Load<Rgba32>(originalBytes);
+
+            if (x < 0) x = 0;
+            if (y < 0) y = 0;
+            if (w <= 0 || h <= 0) return originalBytes;
+
+            if (x + w > image.Width) w = image.Width - x;
+            if (y + h > image.Height) h = image.Height - y;
 
             // ① 四角で切り抜き
             image.Mutate(ctx => ctx.Crop(new Rectangle(x, y, w, h)));
@@ -193,20 +210,14 @@ namespace MyGoodsApp.Pages
             }
         }
 
-        private void Close()
+        private async Task Cancel()
         {
-            DialogReference.Close();
+            await JS.InvokeVoidAsync("MudDialog.close");
         }
 
         #endregion
 
         #region イベント
-
-        protected override void OnParametersSet()
-        {
-            Console.WriteLine("Dialog側 ImageUrl = " + Variant.ImageUrl);
-        }
-
 
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
