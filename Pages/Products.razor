@@ -17,15 +17,15 @@
     <!-- 商品一覧切り替えタブ -->
     <MudTabs @bind-ActivePanelIndex="ActiveTab" Class="mb-4">
         <MudTabPanel Text="所持">
-            @RenderOwnedTab()
+            @RenderTab(OwnedItems, "owned", "#90caf9")
         </MudTabPanel>
 
         <MudTabPanel Text="欲しい">
-            @RenderWantedTab()
+            @RenderTab(WantedItems, "wanted", "#ffb74d")
         </MudTabPanel>
 
         <MudTabPanel Text="交換用">
-            @RenderTradeTab()
+            @RenderTab(TradeItems, "trade", "#81c784")
         </MudTabPanel>
     </MudTabs>
 
@@ -142,6 +142,9 @@
                      ProductId = p.Id,
                      ProductTitle = p.Title,
                      Category = p.Category,
+                     ReleaseDate = p.ReleaseDate,
+                     ReleaseDateText = p.ReleaseDateText,
+                     Price = p.Price,
                      VariantName = v.Name,
                      DisplayName = string.IsNullOrWhiteSpace(v.Name)
                          ? p.Title
@@ -153,6 +156,8 @@
                      Wanted = v.Wanted
                  })
             .OrderBy(x => x.Category)
+            .ThenBy(x => x.ReleaseDate.HasValue ? 0 : 1)   // 日付あり → 先
+            .ThenBy(x => x.ReleaseDate)                    // 日付昇順
             .ThenBy(x => x.ProductTitle)
             .ThenBy(x => x.SourceOrderIndex)
             .ThenBy(x => x.OrderIndex)
@@ -167,105 +172,54 @@
 
     #region メソッド
 
-    /// <summary>所持タブ表示</summary>
-    private RenderFragment RenderOwnedTab() => __builder =>
+    /// <summary>タブレンダリング共通処理</summary>
+    RenderFragment RenderTab(IEnumerable<VariantListItem> items, string mode, string color) => __builder =>
     {
-        if (OwnedItems == null || !OwnedItems.Any())
+        if (items == null || !items.Any())
         {
             __builder.AddContent(0, "該当するアイテムがありません");
             return;
         }
 
-        // --- カテゴリあり ---
-        foreach (var categoryGroup in OwnedItems
+        foreach (var categoryGroup in items
             .Where(x => !string.IsNullOrWhiteSpace(x.Category))
             .GroupBy(x => x.Category))
         {
             <MudExpansionPanel Text="@categoryGroup.Key">
-                @RenderProductGroups(categoryGroup)
+                @RenderProductGroups(categoryGroup, mode, color)
             </MudExpansionPanel>
         }
 
-        // --- カテゴリなし（パネルなしでそのまま表示） ---
-        var noCategoryItems = OwnedItems
-            .Where(x => string.IsNullOrWhiteSpace(x.Category));
-
+        var noCategoryItems = items.Where(x => string.IsNullOrWhiteSpace(x.Category));
         if (noCategoryItems.Any())
         {
-            @RenderProductGroups(noCategoryItems)
+            @RenderProductGroups(noCategoryItems, mode, color)
         }
     };
 
-    /// <summary>所持タブ表示共通処理</summary>
-    RenderFragment RenderProductGroups(IEnumerable<VariantListItem> items) => __builder =>
+    /// <summary>タブ表示共通処理</summary>
+    RenderFragment RenderProductGroups(IEnumerable<VariantListItem> items, string mode, string color) => __builder =>
     {
         foreach (var productGroup in items.GroupBy(x => x.ProductTitle))
         {
             <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
-                     Style="border-left:4px solid #90caf9;padding-left:8px;">
+                     Style=@($"border-left:4px solid {color};padding-left:8px;")>
                 <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
                     @productGroup.Key
                 </MudLink>
-            </MudText>
 
-            @foreach (var item in productGroup.OrderBy(x => x.OrderIndex))
-            {
-                <div class="d-flex align-center ml-4 mb-2">
-
-                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                <!-- ★ 発売日・金額の表示 -->
+                <span style="margin-left:8px; color:gray; font-size:0.9em;">
+                    @(
+                        productGroup.First().ReleaseDate?.ToString("yyyy/MM/dd")
+                        ?? productGroup.First().ReleaseDateText
+                        ?? ""
+                    )
+                    @if (productGroup.First().Price.HasValue)
                     {
-                        <img src="@item.ImageUrl"
-                             style="width:48px;height:48px;object-fit:cover;border-radius:4px;margin-right:8px;" />
+                        <text> / @productGroup.First().Price.Value.ToString("N0") 円</text>
                     }
-
-                    <div>
-                        @item.VariantName
-                        （@item.OwnedForDisplay）
-                    </div>
-                </div>
-            }
-        }
-    };
-
-    /// <summary>ほしいものタブ表示</summary>
-    private RenderFragment RenderWantedTab() => __builder =>
-    {
-        if (WantedItems == null || !WantedItems.Any())
-        {
-            __builder.AddContent(0, "該当するアイテムがありません");
-            return;
-        }
-
-        // --- カテゴリあり ---
-        foreach (var categoryGroup in WantedItems
-            .Where(x => !string.IsNullOrWhiteSpace(x.Category))
-            .GroupBy(x => x.Category))
-        {
-            <MudExpansionPanel Text="@categoryGroup.Key">
-                @RenderWantedProductGroups(categoryGroup)
-            </MudExpansionPanel>
-        }
-
-        // --- カテゴリなし（パネルなしでそのまま表示） ---
-        var noCategoryItems = WantedItems
-            .Where(x => string.IsNullOrWhiteSpace(x.Category));
-
-        if (noCategoryItems.Any())
-        {
-            @RenderWantedProductGroups(noCategoryItems)
-        }
-    };
-
-    /// <summary>ほしいものタブ表示共通処理</summary>
-    RenderFragment RenderWantedProductGroups(IEnumerable<VariantListItem> items) => __builder =>
-    {
-        foreach (var productGroup in items.GroupBy(x => x.ProductTitle))
-        {
-            <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
-                     Style="border-left:4px solid #ffb74d;padding-left:8px;">
-                <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
-                    @productGroup.Key
-                </MudLink>
+                </span>
             </MudText>
 
             @foreach (var item in productGroup.OrderBy(x => x.SourceOrderIndex).ThenBy(x => x.OrderIndex))
@@ -280,72 +234,24 @@
 
                     <div>
                         @item.VariantName
-                        （@item.WantedForDisplay）
+                        （@GetDisplayValue(item, mode)）
                     </div>
                 </div>
             }
         }
     };
 
-    /// <summary>交換用タブ表示</summary>
-    private RenderFragment RenderTradeTab() => __builder =>
+    /// <summary>個数表示</summary>
+    private string GetDisplayValue(VariantListItem item, string mode)
     {
-        if (TradeItems == null || !TradeItems.Any())
+        return mode switch
         {
-            __builder.AddContent(0, "該当するアイテムがありません");
-            return;
-        }
-
-        // --- カテゴリあり ---
-        foreach (var categoryGroup in TradeItems
-            .Where(x => !string.IsNullOrWhiteSpace(x.Category))
-            .GroupBy(x => x.Category))
-        {
-            <MudExpansionPanel Text="@categoryGroup.Key">
-                @RenderTradeProductGroups(categoryGroup)
-            </MudExpansionPanel>
-        }
-
-        // --- カテゴリなし（パネルなしでそのまま表示） ---
-        var noCategoryItems = TradeItems
-            .Where(x => string.IsNullOrWhiteSpace(x.Category));
-
-        if (noCategoryItems.Any())
-        {
-            @RenderTradeProductGroups(noCategoryItems)
-        }
-    };
-
-    /// <summary>交換用タブ表示共通処理</summary>
-    RenderFragment RenderTradeProductGroups(IEnumerable<VariantListItem> items) => __builder =>
-    {
-        foreach (var productGroup in items.GroupBy(x => x.ProductTitle))
-        {
-            <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
-                     Style="border-left:4px solid #81c784;padding-left:8px;">
-                <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
-                    @productGroup.Key
-                </MudLink>
-            </MudText>
-
-            @foreach (var item in productGroup.OrderBy(x => x.SourceOrderIndex).ThenBy(x => x.OrderIndex))
-            {
-                <div class="d-flex align-center ml-4 mb-2">
-
-                    @if (!string.IsNullOrEmpty(item.ImageUrl))
-                    {
-                        <img src="@item.ImageUrl"
-                             style="width:48px;height:48px;object-fit:cover;border-radius:4px;margin-right:8px;" />
-                    }
-
-                    <div>
-                        @item.VariantName
-                        （@item.TradeForDisplay）
-                    </div>
-                </div>
-            }
-        }
-    };
+            "owned" => item.OwnedForDisplay.ToString(),
+            "wanted" => item.WantedForDisplay,
+            "trade" => item.TradeForDisplay.ToString(),
+            _ => ""
+        };
+    }
 
     #endregion
 
@@ -359,13 +265,15 @@
         public Guid ProductId { get; set; }
         public string ProductTitle { get; set; } = "";
         public string Category { get; set; } = "";
+        public DateTime? ReleaseDate { get; set; }
+        public string? ReleaseDateText { get; set; }
+        public decimal? Price { get; set; }
         public string? VariantName { get; set; }
         public string DisplayName { get; set; } = "";
 
         public int SourceOrderIndex { get; set; }
         public int OrderIndex { get; set; }
         public string? ImageUrl { get; set; }
-        // --- 追加 ---
         public int Owned { get; set; }
         public int Wanted { get; set; }
 
