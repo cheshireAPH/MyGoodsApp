@@ -18,6 +18,18 @@ public class Product : BaseModel
     [Column("category")]
     public string Category { get; set; } = string.Empty;
 
+    // 発売日（日付）
+    [Column("release_date")]
+    public DateTime? ReleaseDate { get; set; }
+
+    // 発売日（テキスト）
+    [Column("release_date_text")]
+    public string? ReleaseDateText { get; set; }
+
+    // 金額
+    [Column("price")]
+    public decimal? Price { get; set; }
+
     [Column("is_template")]
     public bool IsTemplate { get; set; } = false;
 

@@ -34,6 +34,27 @@
 
     <MudTextField @bind-Value="product.Category" Label="カテゴリ" />
 
+    <MudGrid Class="mt-2">
+        <MudItem xs="12" sm="6">
+            <MudDatePicker @bind-Date="product.ReleaseDate"
+                           Label="発売日（日付）"
+                           DateFormat="yyyy/MM/dd" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="product.ReleaseDateText"
+                          Label="発売日（テキスト）"
+                          Placeholder="3月中旬 / 春頃 / 2025年予定 など" />
+        </MudItem>
+    </MudGrid>
+
+    <MudNumericField @bind-Value="product.Price"
+                     Label="金額"
+                     Adornment="Adornment.End"
+                     AdornmentText="円"
+                     Min="0"
+                     Class="mt-2" />
+
     <MudDivider Class="my-4" />
 
     <MudButton OnClick="GenerateSequentialChildUrls"
