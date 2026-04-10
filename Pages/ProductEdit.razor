@@ -36,6 +36,13 @@
 
     <MudDivider Class="my-4" />
 
+    <MudButton OnClick="GenerateSequentialChildUrls"
+               Variant="Variant.Outlined"
+               Color="Color.Primary"
+               Class="mb-2">
+        子商品のURLを連番生成
+    </MudButton>
+
     <!-- 子商品リスト -->
     @for (var i = 0; i < sources.Count; i++)
     {
@@ -528,6 +535,37 @@
 
     }
 
+    /// <summary>URL連番</summary>
+    private void GenerateSequentialChildUrls()
+    {
+        if (sources.Count == 0)
+            return;
+
+        // 子1のURLを基準にする
+        var baseUrl = sources[0].Source.Url;
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            return;
+
+        // URL末尾の数字を抽出
+        var match = Regex.Match(baseUrl, @"(\d+)(?!.*\d)");
+        if (!match.Success)
+            return;
+
+        var baseNumber = int.Parse(match.Value);
+        var digitCount = match.Value.Length;
+
+        for (int i = 0; i < sources.Count; i++)
+        {
+            var newNumber = baseNumber + i; // ★ 子1は +0、子2は +1…
+
+            var padded = newNumber.ToString(new string('0', digitCount));
+
+            sources[i].Source.Url =
+                baseUrl[..match.Index] +
+                padded +
+                baseUrl[(match.Index + match.Length)..];
+        }
+    }
 
 
     async Task OpenUrl(string? url)
