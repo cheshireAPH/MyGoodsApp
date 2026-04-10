@@ -220,13 +220,16 @@ namespace MyGoodsApp.Pages
         #region イベント
 
         protected override async Task OnAfterRenderAsync(bool firstRender)
-        {
-            if (firstRender)
-            {
-                await JS.InvokeVoidAsync("cropper.setShape", CurrentShape.ToString().ToLower());
-                await JS.InvokeVoidAsync("cropper.setAspectLocked", AspectLocked);
-            }
-        }
+{
+    if (firstRender)
+    {
+        await Task.Yield(); // ★ これが「後入れ」
+
+        await JS.InvokeVoidAsync("cropper.setShape", CurrentShape.ToString().ToLower());
+        await JS.InvokeVoidAsync("cropper.setAspectLocked", AspectLocked);
+    }
+}
+
 
         #endregion
 
