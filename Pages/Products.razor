@@ -232,16 +232,17 @@
                     }
                 </span>
 
-                <!-- ★ 親商品一括編集ボタン -->
+                <!-- ★　個数編集ボタン -->
                 <MudButton Variant="Variant.Text"
                            Color="Color.Primary"
                            Class="ml-2"
                            OnClick="@(() => StartGroupEdit(productGroup))">
-                    一括編集
+                    個数編集
                 </MudButton>
 
             </MudText>
 
+            //個数編集
             @if (productGroup.Any(x => x.IsGroupEditing))
             {
                 <MudPaper Class="pa-3 ml-4 mb-2 editing-panel" Elevation="1">
@@ -250,12 +251,7 @@
                     {
                         <div class="d-flex align-center mb-2">
 
-                            @if (!string.IsNullOrEmpty(item.ImageUrl))
-                            {
-                                <img src="@item.ImageUrl"
-                                     style="width:48px;height:48px;object-fit:cover;border-radius:4px;margin-right:8px;" />
-                            }
-
+                            <!-- 画像なし -->
                             <div style="width:200px;">@item.VariantName</div>
 
                             <MudNumericField @bind-Value="item.TempOwned"
