@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
 using MyGoodsApp;
+using MyGoodsApp.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -14,6 +15,7 @@ builder.Services.AddSingleton(new SupabaseClientService(url, key));
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddScoped(_ => new HttpClient());
+builder.Services.AddScoped<LayoutStateService>();
 builder.Services.AddMudServices();
 
 await builder.Build().RunAsync();

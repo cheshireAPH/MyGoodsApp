@@ -1,4 +1,5 @@
-﻿@inherits LayoutComponentBase
+﻿@using MyGoodsApp.Services
+@inherits LayoutComponentBase
 
 <MudThemeProvider Theme="@_theme" />
 <MudPopoverProvider />
@@ -8,37 +9,84 @@
 <MudLayout>
 
     <!-- トップバー -->
-    <MudAppBar Color="MudBlazor.Color.Primary" Elevation="4">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="MudBlazor.Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
-        <MudText Typo="Typo.h6" Class="ml-2">Collection</MudText>
+    <MudAppBar Color="Color.Primary" Elevation="4">
+        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="full-width px-2">
+            @switch (LayoutState.LeftMode)
+            {
+                case HeaderLeftMode.Back:
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Secondary"
+                               OnClick="@LayoutState.OnBack">
+                        @LayoutState.BackButtonText
+                    </MudButton>
+                    break;
+
+                case HeaderLeftMode.Menu:
+                    <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                                   Color="Color.Inherit"
+                                   Edge="Edge.Start"
+                                   OnClick="@ToggleDrawer" />
+                    break;
+
+                case HeaderLeftMode.None:
+                    <div style="width:80px"></div>
+                    break;
+            }
+
+            <MudText Typo="Typo.h5" Class="ml-2">
+                @LayoutState.PageTitle
+            </MudText>
+
+            @if (LayoutState.ShowSaveButton)
+            {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="@LayoutState.OnSave">
+                    @LayoutState.SaveButtonText
+                </MudButton>
+            }
+            else
+            {
+                <div style="width:80px"></div>
+            }
+
+        </MudStack>
     </MudAppBar>
 
-    <!-- サイドメニュー -->
-    <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Temporary" Elevation="1" Class="drawer-style">
-        <MudNavMenu>
+    <!-- サイドメニュー（MenuMode のときだけ表示） -->
+    @if (LayoutState.LeftMode == HeaderLeftMode.Menu)
+    {
+        <MudDrawer @bind-Open="_drawerOpen"
+                   Variant="DrawerVariant.Temporary"
+                   Elevation="1"
+                   Class="drawer-style">
 
-            <MudNavLink Href="series" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">
-                Home
-            </MudNavLink>
+            <MudNavMenu>
 
-            <MudNavLink Href="seriesPage" Icon="@Icons.Material.Filled.Collections">
-                Seriese
-            </MudNavLink>
+                <MudNavLink Href="series" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">
+                    Home
+                </MudNavLink>
 
-            <MudNavLink Href="templates" Icon="@Icons.Material.Filled.Image">
-                Templates
-            </MudNavLink>
+                <MudNavLink Href="seriesPage" Icon="@Icons.Material.Filled.Collections">
+                    Seriese
+                </MudNavLink>
 
-            <MudNavLink Href="settings" Icon="@Icons.Material.Filled.Settings">
-                Settings
-            </MudNavLink>
+                <MudNavLink Href="templates" Icon="@Icons.Material.Filled.Image">
+                    Templates
+                </MudNavLink>
 
-            <MudNavLink Href="products/new" Icon="@Icons.Material.Filled.Add">
-                Add Product
-            </MudNavLink>
+                <MudNavLink Href="settings" Icon="@Icons.Material.Filled.Settings">
+                    Settings
+                </MudNavLink>
 
-        </MudNavMenu>
-    </MudDrawer>
+                <MudNavLink Href="products/new" Icon="@Icons.Material.Filled.Add">
+                    Add Product
+                </MudNavLink>
+
+            </MudNavMenu>
+
+        </MudDrawer>
+    }
 
     <!-- メインコンテンツ -->
     <MudMainContent>
@@ -49,6 +97,21 @@
 
 @code {
     private MudTheme _theme = new CuteTheme();
+
+    [Inject] public LayoutStateService LayoutState { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        LayoutState.OnChange += StateHasChanged;
+
+        LayoutState.SetState(
+            "Collection",
+            default,
+            default,
+            leftMode: HeaderLeftMode.Menu,
+            showSave: false
+        );
+    }
 
     bool _drawerOpen = false;
     void ToggleDrawer() => _drawerOpen = !_drawerOpen;

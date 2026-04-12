@@ -5,15 +5,6 @@
 
 <MudPaper Class="pa-4 mx-auto" MaxWidth="900px">
 
-    <MudText Typo="Typo.h5" Class="mb-4">商品一覧</MudText>
-
-    <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Primary"
-               StartIcon="@Icons.Material.Filled.ArrowBack"
-               OnClick="@(() => Nav.NavigateTo("series"))">
-        戻る
-    </MudButton>
-
-
     <!-- 商品一覧切り替えタブ -->
     <MudTabs @bind-ActivePanelIndex="ActiveTab" Class="mb-4">
         <MudTabPanel Text="所持">
@@ -46,9 +37,9 @@
     #endregion
 
     #region プロパティ
+    [Inject] public LayoutStateService LayoutState { get; set; } = default!;
 
-    [Parameter]
-    public int? SeriesId { get; set; }
+    [Parameter] public int? SeriesId { get; set; }
 
     /// <summary>所持タブ表示</summary>
     private IEnumerable<VariantListItem> OwnedItems =>
@@ -79,6 +70,26 @@
             SelectedSeriesId = SeriesId;
 
         await LoadVariantList();
+
+        // ★ 作品名を取得
+        var selectedSeriesName = SelectedSeriesId.HasValue
+            ? AllSeries.FirstOrDefault(s => s.Id == SelectedSeriesId)?.Name
+            : null;
+
+        // ★ タイトルを組み立て
+        var headerTitle = selectedSeriesName is null
+            ? "商品一覧"
+            : $"商品一覧：{selectedSeriesName}";
+
+        //★ ヘッダー設定
+        LayoutState.SetState(
+            title: headerTitle,
+            onBack: EventCallback.Factory.Create(this, () => Nav.NavigateTo("series")),
+            onSave: default,
+            leftMode: HeaderLeftMode.Back,
+            showSave: false,
+            backText: "← 戻る"
+        );
     }
 
     private async Task LoadSeries()

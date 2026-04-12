@@ -12,23 +12,6 @@
 
 <MudPaper Class="pa-4 mx-auto" MaxWidth="900px" Elevation="4">
 
-    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-        <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="GoBack">
-            ← 戻る
-        </MudButton>
-
-        <MudText Typo="Typo.h5" Class="mb-4">
-            @(IsTemplateMode
-                ? (IsEditMode ? "テンプレを編集" : "新規テンプレ作成")
-                : (IsEditMode ? "商品を編集" : "新規商品追加"))
-        </MudText>
-
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAll">
-            @(IsEditMode ? "変更を保存" : "すべて保存する")
-        </MudButton>
-    </MudStack>
-
-
     <!-- 親商品 -->
     <MudTextField @bind-Value="product.Title"
                   Label="@(IsTemplateMode ? "テンプレ名" : "商品名")"
@@ -270,6 +253,7 @@
     #endregion
 
     #region プロパティ
+    [Inject] public LayoutStateService LayoutState { get; set; } = default!;
 
     [Parameter] public Guid? Id { get; set; }
     [Parameter] public Guid? TemplateId { get; set; }
@@ -382,6 +366,23 @@
                 };
             }
         }
+
+        //ヘッダー設定
+        LayoutState.SetState(
+            title: IsTemplateMode
+                ? (IsEditMode ? "テンプレを編集" : "新規テンプレ作成")
+                : (IsEditMode ? "商品を編集" : "新規商品追加"),
+
+            onBack: EventCallback.Factory.Create(this, GoBack),
+            onSave: EventCallback.Factory.Create(this, SaveAll),
+
+            leftMode: HeaderLeftMode.Back,
+            showSave: true,
+
+            backText: "← 戻る",
+            saveText: IsEditMode ? "変更を保存" : "すべて保存する"
+        );
+
     }
 
     /* ------------------------------

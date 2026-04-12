@@ -314,3 +314,8 @@ code {
     bottom: -10px;
     cursor: se-resize;
 }
+
+.full-width {
+    width: 100%;
+    display: flex;
+}

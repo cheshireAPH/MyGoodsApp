@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using MudBlazor;
+using MyGoodsApp.Services;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
@@ -16,6 +17,7 @@ namespace MyGoodsApp.Pages
         [Inject] public IJSRuntime JS { get; set; } = default!;
         [Inject] public HttpClient Http { get; set; } = default!;
         [Inject] public SupabaseClientService Supabase { get; set; } = default!;
+        [Inject] public LayoutStateService LayoutState { get; set; } = default!;
 
         [Parameter] public Guid variantId { get; set; }
 
@@ -220,8 +222,29 @@ namespace MyGoodsApp.Pages
             };
 
             // ★ Supabase の画像を TempImageBytes に読み込む
-            Variant.TempImageBytes = await Http.GetByteArrayAsync(Variant.ImageUrl);
+            if (Variant.ImageUrl.StartsWith("data:"))
+            {
+                var base64 = Variant.ImageUrl.Split(',')[1];
+                Variant.TempImageBytes = Convert.FromBase64String(base64);
+            }
+            else
+            {
+                // ★ Supabase の URL の場合だけ HTTP で取得
+                Variant.TempImageBytes = await Http.GetByteArrayAsync(Variant.ImageUrl);
+            }
+
+            // ヘッダー設定
+            LayoutState.SetState(
+                Variant.Name,
+                EventCallback.Factory.Create(this, Cancel),
+                EventCallback.Factory.Create(this, ApplyCrop),
+                leftMode: HeaderLeftMode.Back,
+                showSave: true,
+                backText: "キャンセル",
+                saveText: "OK"
+            );
         }
+
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
             if (firstRender)
