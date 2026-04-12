@@ -245,15 +245,14 @@ code {
     z-index: 1;
 }
 
-/* MudDialog の中身を flex 縦並びにする */
-.mud-dialog-content {
+.edit-root {
     display: flex;
     flex-direction: column;
+    height: 100vh;
 }
 
-/* 真ん中のエリアを伸ばす */
 .cropper-main {
-    flex: 1;
+    flex: 1; /* ← 真ん中を伸ばす */
     overflow: hidden;
     background-color: #f0f0f0;
 }

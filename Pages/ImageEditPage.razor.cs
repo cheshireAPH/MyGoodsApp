@@ -6,19 +6,20 @@ using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using static System.Net.WebRequestMethods;
 
 namespace MyGoodsApp.Pages
 {
-    public partial class ImageEditDialog : ComponentBase
+    public partial class ImageEditPage : ComponentBase
     {
         #region プロパティ
 
-        [Inject] public IJSRuntime JS { get; set; }
-        [Inject] public HttpClient Http { get; set; }
+        [Inject] public IJSRuntime JS { get; set; } = default!;
+        [Inject] public HttpClient Http { get; set; } = default!;
+        [Inject] public SupabaseClientService Supabase { get; set; } = default!;
 
-        [CascadingParameter] public IDialogReference? DialogReference { get; set; }
-        [Parameter] public ProductVariantViewModel Variant { get; set; }
+        [Parameter] public Guid variantId { get; set; }
+
+        public ProductVariantViewModel Variant { get; set; } = new();
 
         public class CropFrame
         {
@@ -85,47 +86,32 @@ namespace MyGoodsApp.Pages
         /// <summary>90度回転</summary>
         async Task Rotate90()
         {
-            var bytes = Variant.TempImageBytes ?? await Http.GetByteArrayAsync(Variant.ImageUrl);
-
+            var bytes = Variant.TempImageBytes!;
             using var image = Image.Load(bytes);
 
             image.Mutate(x => x.Rotate(90));
 
             using var ms = new MemoryStream();
             image.SaveAsPng(ms);
-            var newBytes = ms.ToArray();
-
-            // ★ 保存前はアップロードしない
-            Variant.TempImageBytes = newBytes;
-
-            // ★ プレビュー用に Base64 をセット
-            Variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(newBytes)}";
+            Variant.TempImageBytes = ms.ToArray();
         }
 
         async Task ApplyCrop()
         {
             var frame = await JS.InvokeAsync<CropFrame>("cropper.getFrame");
 
-            // ★ ソース画像を必ず確保
-            var sourceBytes = Variant.TempImageBytes
-                              ?? await Http.GetByteArrayAsync(Variant.ImageUrl);
+            var sourceBytes = Variant.TempImageBytes!;
+            byte[] cropped;
 
             if (CurrentShape == CropShape.Circle)
-            {
-                Variant.TempImageBytes = CropCircle(
-                    sourceBytes,
-                    frame.X, frame.Y, frame.Width, frame.Height
-                );
-            }
+                cropped = CropCircle(sourceBytes, frame.X, frame.Y, frame.Width, frame.Height);
             else
-            {
-                Variant.TempImageBytes = CropRectangle(
-                    sourceBytes,
-                    frame.X, frame.Y, frame.Width, frame.Height
-                );
-            }
+                cropped = CropRectangle(sourceBytes, frame.X, frame.Y, frame.Width, frame.Height);
 
-            DialogReference?.Close(DialogResult.Ok(Variant.TempImageBytes));
+            var base64 = Convert.ToBase64String(cropped);
+
+            await JS.InvokeVoidAsync("postMessageToOpener", variantId.ToString(), base64);
+            await JS.InvokeVoidAsync("close");
         }
 
         byte[] CropRectangle(byte[] originalBytes, int x, int y, int w, int h)
@@ -201,38 +187,52 @@ namespace MyGoodsApp.Pages
             return ms.ToArray();
         }
 
-        void Reset()
-        {
-            if (Variant?.TempImageBytes != null)
-            {
-                // TempImageBytes を初期状態に戻す
-                Variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(Variant.TempImageBytes)}";
-            }
-        }
-
         private async Task Cancel()
         {
-            await JS.InvokeVoidAsync("MudDialog.close");
+            await JS.InvokeVoidAsync("close");
+        }
+
+        string GetPreviewImage()
+        {
+            if (Variant.TempImageBytes == null)
+                return "";
+
+            return $"data:image/png;base64,{Convert.ToBase64String(Variant.TempImageBytes)}";
         }
 
         #endregion
 
         #region イベント
 
+        protected override async Task OnInitializedAsync()
+        {
+            var v = await Supabase.Client
+                .From<ProductVariant>()
+                .Where(x => x.Id == variantId)
+                .Single();
+
+            Variant = new ProductVariantViewModel
+            {
+                Id = v.Id,
+                Name = v.Name,
+                ImageUrl = v.ImageUrl,
+                TempImageBytes = null
+            };
+
+            // ★ Supabase の画像を TempImageBytes に読み込む
+            Variant.TempImageBytes = await Http.GetByteArrayAsync(Variant.ImageUrl);
+        }
         protected override async Task OnAfterRenderAsync(bool firstRender)
-{
-    if (firstRender)
-    {
-        await Task.Yield(); // ★ これが「後入れ」
+        {
+            if (firstRender)
+            {
+                await JS.InvokeVoidAsync("initCropperWhenImageReady");
 
-        await JS.InvokeVoidAsync("cropper.setShape", CurrentShape.ToString().ToLower());
-        await JS.InvokeVoidAsync("cropper.setAspectLocked", AspectLocked);
-    }
-}
-
+                await JS.InvokeVoidAsync("cropper.setShape", CurrentShape.ToString().ToLower());
+                await JS.InvokeVoidAsync("cropper.setAspectLocked", AspectLocked);
+            }
+        }
 
         #endregion
-
     }
-
 }

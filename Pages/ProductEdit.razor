@@ -12,11 +12,22 @@
 
 <MudPaper Class="pa-4 mx-auto" MaxWidth="900px" Elevation="4">
 
-    <MudText Typo="Typo.h5" Class="mb-4">
-        @(IsTemplateMode
-            ? (IsEditMode ? "テンプレを編集" : "新規テンプレ作成")
-            : (IsEditMode ? "商品を編集" : "新規商品追加"))
-    </MudText>
+    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+        <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="GoBack">
+            ← 戻る
+        </MudButton>
+
+        <MudText Typo="Typo.h5" Class="mb-4">
+            @(IsTemplateMode
+                ? (IsEditMode ? "テンプレを編集" : "新規テンプレ作成")
+                : (IsEditMode ? "商品を編集" : "新規商品追加"))
+        </MudText>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAll">
+            @(IsEditMode ? "変更を保存" : "すべて保存する")
+        </MudButton>
+    </MudStack>
+
 
     <!-- 親商品 -->
     <MudTextField @bind-Value="product.Title"
@@ -511,50 +522,50 @@
 
     async Task OpenEditDialog(ProductVariantViewModel variant)
     {
-        // ★ URL → Base64 変換
-        if (variant.TempImageBytes == null &&
-            !variant.ImageUrl.StartsWith("data:"))
+        if (variant.TempImageBytes == null)
         {
             try
             {
                 var bytes = await Http.GetByteArrayAsync(variant.ImageUrl);
                 variant.TempImageBytes = bytes;
-                variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine("画像読み込み失敗: " + ex.Message);
-                return; // ★ ここが重要
+                return;
             }
         }
 
-        var options = new DialogOptions
-        {
-            CloseButton = false,
-            FullScreen = true
-        };
-
-        var parameters = new DialogParameters
-        {
-            ["Variant"] = variant
-        };
-
-        var dialog = await DialogService.ShowAsync<ImageEditDialog>("画像編集", parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
-        {
-            // ★ ここで画像データを受け取る
-            var editedBytes = result.Data as byte[];
-
-            if (editedBytes != null)
-            {
-                variant.TempImageBytes = editedBytes;
-                variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(editedBytes)}";
-            }
-        }
-
+        await JS.InvokeVoidAsync("openUrl", $"image-edit/{variant.Id}");
     }
+
+    [JSInvokable]
+    public Task OnImageEdited(string variantId, string base64)
+    {
+        var bytes = Convert.FromBase64String(base64);
+
+        var v = sources
+            .SelectMany(s => s.Variants)
+            .FirstOrDefault(x => x.Id == Guid.Parse(variantId));
+
+        if (v != null)
+        {
+            v.TempImageBytes = bytes;
+            v.ImageUrl = $"data:image/png;base64,{base64}";
+        }
+
+        StateHasChanged();
+
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("registerProductEditInstance", DotNetObjectReference.Create(this));
+        }
+    }
+
 
     /// <summary>URL連番</summary>
     private void GenerateSequentialChildUrls()
@@ -587,7 +598,6 @@
                 baseUrl[(match.Index + match.Length)..];
         }
     }
-
 
     async Task OpenUrl(string? url)
     {

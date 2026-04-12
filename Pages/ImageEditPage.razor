@@ -1,0 +1,33 @@
+﻿@page "/image-edit/{variantId:guid}"
+
+<div class="edit-root">
+
+    <!-- 上部バー -->
+    <MudPaper Class="cropper-top-bar">
+        <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="Cancel" />
+        <MudText Typo="Typo.h6">@Variant.Name</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Check" OnClick="ApplyCrop" />
+    </MudPaper>
+
+    <!-- 画像エリア -->
+    <MudPaper Class="cropper-main">
+        <div id="crop-container">
+            <img id="edit-image" src="@GetPreviewImage()" />
+
+            <div id="crop-frame" class="@GetCropFrameClass()">
+                <div class="handle handle-nw"></div>
+                <div class="handle handle-ne"></div>
+                <div class="handle handle-sw"></div>
+                <div class="handle handle-se"></div>
+            </div>
+        </div>
+    </MudPaper>
+
+    <!-- 下部バー -->
+    <MudPaper Class="cropper-bottom-bar">
+        <MudIconButton Icon="@Icons.Material.Filled.Rotate90DegreesCcw" OnClick="Rotate90" />
+        <MudIconButton Icon="@GetShapeIcon()" OnClick="ToggleShape" />
+        <MudIconButton Icon="@Icons.Material.Filled.Lock" Color="@((AspectLocked) ? Color.Primary : Color.Default)" OnClick="ToggleAspectLock" />
+    </MudPaper>
+
+</div>

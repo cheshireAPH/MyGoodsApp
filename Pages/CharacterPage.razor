@@ -75,7 +75,7 @@
             { "Character", new Character { SeriesId = SeriesId } }
         };
 
-        var dialog = await Dialog.ShowAsync<CharacterEditDialog>(
+        var dialog = await Dialog.ShowAsync<Components.CharacterEditDialog>(
             "新規キャラ追加",
             parameters
         );
@@ -92,7 +92,7 @@
             { "Character", c }
         };
 
-        var dialog = await Dialog.ShowAsync<CharacterEditDialog>(
+        var dialog = await Dialog.ShowAsync<Components.CharacterEditDialog>(
             "キャラ編集",
             parameters
         );
