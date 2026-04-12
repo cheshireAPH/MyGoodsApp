@@ -32,12 +32,18 @@
     int? SelectedSeriesId;
     int ActiveTab = 0;
 
+    string headerTitle = "商品一覧";
+
+    /// <summary>画像生成モードフラグ</summary>
+    bool IsImageMode = false;
+
     List<VariantListItem>? VariantItems;
 
     #endregion
 
     #region プロパティ
     [Inject] public LayoutStateService LayoutState { get; set; } = default!;
+    [Inject] public ImageGenerateService ImageService { get; set; } = default!;
 
     [Parameter] public int? SeriesId { get; set; }
 
@@ -77,19 +83,11 @@
             : null;
 
         // ★ タイトルを組み立て
-        var headerTitle = selectedSeriesName is null
+        headerTitle = selectedSeriesName is null
             ? "商品一覧"
             : $"商品一覧：{selectedSeriesName}";
 
-        //★ ヘッダー設定
-        LayoutState.SetState(
-            title: headerTitle,
-            onBack: EventCallback.Factory.Create(this, () => Nav.NavigateTo("series")),
-            onSave: default,
-            leftMode: HeaderLeftMode.Back,
-            showSave: false,
-            backText: "← 戻る"
-        );
+        ExitImageMode();
     }
 
     private async Task LoadSeries()
@@ -213,6 +211,18 @@
     {
         foreach (var productGroup in items.GroupBy(x => x.ProductTitle))
         {
+            @if (IsImageMode)
+            {
+                <MudCheckBox T="bool"
+                             @bind-Checked="productGroup.First().IsProductSelected"
+                             OnChanged="@( (bool? value) => OnProductChecked(productGroup, value == true) )" />
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Primary"
+                           OnClick="@(() => SelectFiltered(productGroup))">
+                    全選択
+                </MudButton>
+            }
+
             <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
                      Style=@($"border-left:4px solid {color};padding-left:8px;")>
                 <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
@@ -287,6 +297,12 @@
             {
                 <div class="d-flex align-center ml-4 mb-2">
 
+                    @if (IsImageMode)
+                    {
+                        <MudCheckBox T="bool"
+                                     @bind-Checked="item.IsSelected" />
+                    }
+
                     @if (!string.IsNullOrEmpty(item.ImageUrl))
                     {
                         <img src="@item.ImageUrl"
@@ -346,6 +362,62 @@
         };
     }
 
+    /// <summary>画像生成モード</summary>
+    void EnterImageMode()
+    {
+        IsImageMode = true;
+
+        LayoutState.SetState(
+            title: "画像生成モード",
+            onBack: EventCallback.Factory.Create(this, ExitImageMode),
+            onSave: EventCallback.Factory.Create(this, GoToImageGeneratePage),
+            leftMode: HeaderLeftMode.Back,
+            showSave: true,
+            backText: "← 戻る",
+            saveText: "OK"
+        );
+    }
+
+    /// <summary>画像生成モード終了</summary>
+    void ExitImageMode()
+    {
+        IsImageMode = false;
+
+        //★ ヘッダー設定
+        LayoutState.SetState(
+            title: headerTitle,
+            onBack: EventCallback.Factory.Create(this, () => Nav.NavigateTo("series")),
+            onSave: EventCallback.Factory.Create(this, EnterImageMode),
+            leftMode: HeaderLeftMode.Back,
+            showSave: true,
+            backText: "← 戻る",
+            saveText: "画像生成"
+        );
+    }
+
+    /// <summary>画像生成画面遷移</summary>
+    void GoToImageGeneratePage()
+    {
+        ImageService.SelectedItems = VariantItems.Where(x => x.IsSelected).ToList();
+        Nav.NavigateTo("image-generate");
+    }
+
+    /// <summary>親商品チェック</summary>
+    void OnProductChecked(IEnumerable<VariantListItem> group, bool isChecked)
+    {
+        foreach (var v in group)
+        {
+            v.IsSelected = isChecked; // 個数0含む全排出品
+        }
+    }
+
+    /// <summary>全選択</summary>
+    void SelectFiltered(IEnumerable<VariantListItem> items)
+    {
+        foreach (var v in items)
+            v.IsSelected = true;
+    }
+
     #endregion
 
     #region ViewModel
@@ -374,6 +446,11 @@
         public Guid VariantId { get; set; }
         public bool IsGroupEditing { get; set; } = false;
         public int TempOwned { get; set; }
+
+        //画像編集モード
+        public bool IsSelected { get; set; } = false;
+        public bool IsProductSelected { get; set; } = false; // 親商品用
+
 
         // 所持タブ用（希望数を上限にする）
         public int OwnedForDisplay =>

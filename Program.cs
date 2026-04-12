@@ -16,6 +16,7 @@ builder.Services.AddSingleton(new SupabaseClientService(url, key));
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddScoped(_ => new HttpClient());
 builder.Services.AddScoped<LayoutStateService>();
+builder.Services.AddSingleton<ImageGenerateService>();
 builder.Services.AddMudServices();
 
 await builder.Build().RunAsync();
