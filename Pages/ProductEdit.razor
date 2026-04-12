@@ -45,35 +45,42 @@
 
     <MudTextField @bind-Value="product.Category" Label="カテゴリ" />
 
-    <MudGrid Class="mt-2">
-        <MudItem xs="12" sm="6">
-            <MudDatePicker @bind-Date="product.ReleaseDate"
-                           Label="発売日（日付）"
-                           DateFormat="yyyy/MM/dd" />
-        </MudItem>
+    @if (!IsTemplateMode)
+    {
+        <MudGrid Class="mt-2">
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-DateOnly="product.ReleaseDate"
+                               Label="発売日（日付）"
+                               DateFormat="yyyy/MM/dd" />
+            </MudItem>
 
-        <MudItem xs="12" sm="6">
-            <MudTextField @bind-Value="product.ReleaseDateText"
-                          Label="発売日（テキスト）"
-                          Placeholder="3月中旬 / 春頃 / 2025年予定 など" />
-        </MudItem>
-    </MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="product.ReleaseDateText"
+                              Label="発売日（テキスト）"
+                              Placeholder="3月中旬 / 春頃 / 2025年予定 など" />
+            </MudItem>
+        </MudGrid>
 
-    <MudNumericField @bind-Value="product.Price"
-                     Label="金額"
-                     Adornment="Adornment.End"
-                     AdornmentText="円"
-                     Min="0"
-                     Class="mt-2" />
+        <MudNumericField @bind-Value="product.Price"
+                         Label="金額"
+                         Adornment="Adornment.End"
+                         AdornmentText="円"
+                         Min="0"
+                         Class="mt-2" />
+
+    }
 
     <MudDivider Class="my-4" />
 
-    <MudButton OnClick="GenerateSequentialChildUrls"
-               Variant="Variant.Outlined"
-               Color="Color.Primary"
-               Class="mb-2">
-        子商品のURLを連番生成
-    </MudButton>
+    @if (!IsTemplateMode)
+    {
+        <MudButton OnClick="GenerateSequentialChildUrls"
+                   Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   Class="mb-2">
+            子商品のURLを連番生成
+        </MudButton>
+    }
 
     <!-- 子商品リスト -->
     @for (var i = 0; i < sources.Count; i++)
@@ -184,7 +191,7 @@
                             }
                         </MudSelect>
 
-                        <!-- ★ 新規キャラ追加欄（復活） -->
+                        <!-- ★ 新規キャラ追加欄 -->
                         <MudTextField @bind-Value="NewCharacterName"
                                       Placeholder="新規キャラ名を追加"
                                       OnBlur="@(() => AddNewCharacter(variant))" />
@@ -247,18 +254,6 @@
     </MudButton>
 
     <MudDivider Class="my-4" />
-
-    <MudButton Variant="Variant.Filled"
-               Color="MudBlazor.Color.Primary"
-               OnClick="SaveAll">
-        @(IsEditMode ? "変更を保存" : "すべて保存する")
-    </MudButton>
-
-    <MudButton Variant="Variant.Text"
-               Color="MudBlazor.Color.Secondary"
-               OnClick="@(() => GoBack())">
-        ← 戻る
-    </MudButton>
 
 </MudPaper>
 

@@ -20,7 +20,7 @@ public class Product : BaseModel
 
     // 発売日（日付）
     [Column("release_date")]
-    public DateTime? ReleaseDate { get; set; }
+    public DateOnly? ReleaseDate { get; set; }
 
     // 発売日（テキスト）
     [Column("release_date_text")]
