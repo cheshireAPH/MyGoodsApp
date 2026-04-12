@@ -32,7 +32,10 @@
     {
         <MudGrid Class="mt-2">
             <MudItem xs="12" sm="6">
-                <MudDatePicker @bind-DateOnly="product.ReleaseDate"
+                <MudDatePicker Date="@(product.ReleaseDate.HasValue
+                                           ? product.ReleaseDate.Value.ToDateTime(TimeOnly.MinValue)
+                                       : null)"
+                               DateChanged="@(dt => product.ReleaseDate = dt.HasValue ? DateOnly.FromDateTime(dt.Value) : null)"
                                Label="発売日（日付）"
                                DateFormat="yyyy/MM/dd" />
             </MudItem>
@@ -295,6 +298,8 @@
                 .From<Product>()
                 .Where(x => x.Id == Id.Value)
                 .Single();
+
+            Console.WriteLine($"DEBUG: ReleaseDate = {product.ReleaseDate}");
 
             SelectedSeries = AllSeries.FirstOrDefault(s => s.Id == product.SeriesId);
 

@@ -252,12 +252,17 @@ a, .btn-link {
 /* トリミング枠 */
 #crop-frame {
     position: absolute;
-    border: 3px solid var(--mud-palette-primary);
+    border: 3px dashed var(--mud-palette-primary);
     border-radius: 12px;
     box-shadow: 0 0 0 2px rgba(255, 182, 217, 0.4);
     box-sizing: border-box;
     pointer-events: none;
 }
+
+    #crop-frame.circle {
+        border-radius: 50%;
+        border: 3px dashed var(--mud-palette-primary);
+    }
 
 .handle {
     position: absolute;
