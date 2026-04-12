@@ -21,7 +21,7 @@ window.cropper = (function () {
 
     // リサイズ
     let resizing = false;
-    let resizeCorner = null; // "nw" | "ne" | "sw" | "se"
+    let resizeCorner = null;
     let startMouseX = 0;
     let startMouseY = 0;
     let startLeft = 0;
@@ -34,6 +34,9 @@ window.cropper = (function () {
     let pinching = false;
     let lastPinchDistance = 0;
 
+    /* ------------------------------
+       画像の位置・サイズを反映
+    ------------------------------ */
     function applyImageRect() {
         image.style.left = imgLeft + "px";
         image.style.top = imgTop + "px";
@@ -41,6 +44,9 @@ window.cropper = (function () {
         image.style.height = imgHeight + "px";
     }
 
+    /* ------------------------------
+       初期化：画像と枠を中央に配置
+    ------------------------------ */
     function initImageAndFrame() {
         const cw = container.clientWidth;
         const ch = container.clientHeight;
@@ -49,22 +55,28 @@ window.cropper = (function () {
         naturalHeight = image.naturalHeight;
         if (!naturalWidth || !naturalHeight) return;
 
-        // 画像をコンテナにフィットさせる（縦横比維持）
+        // 画像をコンテナにフィット
         const scale = Math.min(cw / naturalWidth, ch / naturalHeight);
         imgWidth = naturalWidth * scale;
         imgHeight = naturalHeight * scale;
+
+        // 中央配置
         imgLeft = (cw - imgWidth) / 2;
         imgTop = (ch - imgHeight) / 2;
         applyImageRect();
 
-        // トリミング枠：短辺×0.9 の正方形
-        const size = Math.min(cw, ch) * 0.9;
+        // トリミング枠：画像の短辺 × 0.9 の正方形
+        const size = Math.min(imgWidth, imgHeight) * 0.9;
+
         frame.style.width = size + "px";
         frame.style.height = size + "px";
         frame.style.left = (cw - size) / 2 + "px";
         frame.style.top = (ch - size) / 2 + "px";
     }
 
+    /* ------------------------------
+       パン（ドラッグ移動）
+    ------------------------------ */
     function startPan(x, y) {
         panning = true;
         panStartX = x;
@@ -80,6 +92,9 @@ window.cropper = (function () {
         applyImageRect();
     }
 
+    /* ------------------------------
+       リサイズ
+    ------------------------------ */
     function startResize(x, y, corner) {
         resizing = true;
         resizeCorner = corner;
@@ -143,6 +158,9 @@ window.cropper = (function () {
         frame.style.height = newH + "px";
     }
 
+    /* ------------------------------
+       ホイールズーム
+    ------------------------------ */
     function handleWheelZoom(e) {
         e.preventDefault();
         if (!naturalWidth || !naturalHeight) return;
@@ -153,6 +171,7 @@ window.cropper = (function () {
 
         const delta = -e.deltaY;
         const zoomFactor = 1 + delta * 0.001;
+
         const newWidth = imgWidth * zoomFactor;
         const newHeight = imgHeight * zoomFactor;
 
@@ -174,6 +193,9 @@ window.cropper = (function () {
         applyImageRect();
     }
 
+    /* ------------------------------
+       ピンチズーム
+    ------------------------------ */
     function distanceTouches(t1, t2) {
         const dx = t1.clientX - t2.clientX;
         const dy = t1.clientY - t2.clientY;
@@ -233,13 +255,16 @@ window.cropper = (function () {
         applyImageRect();
     }
 
+    /* ------------------------------
+       イベント登録
+    ------------------------------ */
     function attachEvents() {
         // ハンドル
         const handles = frame.querySelectorAll(".handle");
         handles.forEach(h => {
             const corner = Array.from(h.classList)
                 .find(c => c.startsWith("handle-"))
-                ?.replace("handle-", ""); // "nw" など
+                ?.replace("handle-", "");
 
             h.addEventListener("mousedown", e => {
                 e.stopPropagation();
@@ -253,7 +278,7 @@ window.cropper = (function () {
             });
         });
 
-        // パン開始（枠以外）
+        // パン開始
         container.addEventListener("mousedown", e => {
             if (e.target === frame || e.target.closest("#crop-frame")) return;
             startPan(e.clientX, e.clientY);
@@ -308,6 +333,9 @@ window.cropper = (function () {
         container.addEventListener("wheel", handleWheelZoom, { passive: false });
     }
 
+    /* ------------------------------
+       公開 API
+    ------------------------------ */
     return {
         setShape: function (shape) {
             window.cropperShape = shape;
@@ -329,8 +357,6 @@ window.cropper = (function () {
         },
 
         init: function () {
-            console.log("cropper.init called");
-
             container = document.getElementById("crop-container");
             frame = document.getElementById("crop-frame");
             image = document.getElementById("edit-image");
