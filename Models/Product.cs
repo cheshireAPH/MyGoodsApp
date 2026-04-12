@@ -1,5 +1,6 @@
 ﻿using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
+using System.Text.Json.Serialization;
 
 namespace MyGoodsApp.Models;
 
@@ -20,6 +21,7 @@ public class Product : BaseModel
 
     // 発売日（日付）
     [Column("release_date")]
+    [JsonConverter(typeof(DateOnlyJsonConverter))]
     public DateOnly? ReleaseDate { get; set; }
 
     // 発売日（テキスト）
