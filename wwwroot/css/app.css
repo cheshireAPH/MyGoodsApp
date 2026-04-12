@@ -1,6 +1,6 @@
-/* -----------------------------------
-   基本スタイル
------------------------------------ */
+/* ===================================
+   1. 基本スタイル
+=================================== */
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
@@ -31,9 +31,9 @@ a, .btn-link {
     padding-top: 1.1rem;
 }
 
-/* -----------------------------------
-   バリデーション
------------------------------------ */
+/* ===================================
+   2. バリデーション
+=================================== */
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
 }
@@ -46,18 +46,15 @@ a, .btn-link {
     color: red;
 }
 
-/* -----------------------------------
-   Blazor エラー UI
------------------------------------ */
+/* ===================================
+   3. Blazor エラー UI
+=================================== */
 #blazor-error-ui {
-    color-scheme: light only;
     background: lightyellow;
     bottom: 0;
-    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
-    box-sizing: border-box;
     display: none;
     left: 0;
-    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    padding: 0.6rem 1.25rem;
     position: fixed;
     width: 100%;
     z-index: 1000;
@@ -70,22 +67,11 @@ a, .btn-link {
         top: 0.5rem;
     }
 
-.blazor-error-boundary {
-    background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3...) no-repeat 1rem/1.8rem, #b32121;
-    padding: 1rem 1rem 1rem 3.7rem;
-    color: white;
-}
-
-    .blazor-error-boundary::after {
-        content: "An error has occurred.";
-    }
-
-/* -----------------------------------
-   ローディング
------------------------------------ */
+/* ===================================
+   4. ローディング
+=================================== */
 .loading-progress {
     position: absolute;
-    display: block;
     width: 8rem;
     height: 8rem;
     inset: 20vh 0 auto 0;
@@ -113,20 +99,9 @@ a, .btn-link {
     inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
 }
 
-    .loading-progress-text:after {
-        content: var(--blazor-load-percentage-text, "Loading");
-    }
-
-/* -----------------------------------
-   コード表示
------------------------------------ */
-code {
-    color: #c02d76;
-}
-
-/* -----------------------------------
-   Drawer / ナビゲーション
------------------------------------ */
+/* ===================================
+   5. Drawer / ナビゲーション
+=================================== */
 .drawer-style {
     background: #fff7fb;
 }
@@ -147,9 +122,9 @@ code {
         color: #fff !important;
     }
 
-/* -----------------------------------
-   並び替え UI
------------------------------------ */
+/* ===================================
+   6. 並び替え UI
+=================================== */
 .drag-handle {
     cursor: grab;
     font-size: 20px;
@@ -160,9 +135,9 @@ code {
     opacity: 0.4;
 }
 
-/* -----------------------------------
-   画像セル（PC → 縦 / スマホ → 横）
------------------------------------ */
+/* ===================================
+   7. 画像セル（PC → 縦 / スマホ → 横）
+=================================== */
 .variant-image-cell {
     display: flex;
     flex-direction: column;
@@ -184,34 +159,15 @@ code {
         }
 }
 
-/* -----------------------------------
-   並べ替え＋削除（PCは縦、スマホは横）
------------------------------------ */
-.actions-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-@media (max-width: 600px) {
-    .actions-wrapper {
-        flex-direction: row;
-        align-items: center;
-        gap: 8px;
-    }
-}
-
-/* -----------------------------------
-   所持・希望（PC → 縦 / スマホ → 横）
------------------------------------ */
-/* PCでは縦並び */
+/* ===================================
+   8. 所持・希望（PC → 縦 / スマホ → 横）
+=================================== */
 .count-wrapper {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-/* スマホでは横並び */
 @media (max-width: 600px) {
     .count-wrapper {
         flex-direction: row;
@@ -224,21 +180,20 @@ code {
         }
 }
 
+/* ===================================
+   9. URL + アイコン
+=================================== */
 .url-with-icon {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.open-url-btn {
-    margin-top: 20px; /* テキストフィールドの高さに合わせる */
-}
-
-/* ===== Cropper 基本レイアウト ===== */
-
+/* ===================================
+   10. 画像編集（Cropper）
+=================================== */
 .cropper-top-bar,
 .cropper-bottom-bar {
-    position: relative;
     width: 100%;
     background: white;
     padding: 8px 16px;
@@ -248,13 +203,13 @@ code {
 .edit-root {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: calc(100dvh - 56px); /* ← スマホ最適化 + AppBar 分を引く */
 }
 
 .cropper-main {
-    flex: 1; /* ← 真ん中を伸ばす */
+    flex: 1;
     overflow: hidden;
-    background-color: #f0f0f0;
+    background: black;
 }
 
 #crop-container {
@@ -271,64 +226,21 @@ code {
     touch-action: none;
 }
 
-#crop-frame {
-    position: absolute;
-    border: 2px dashed var(--mud-palette-primary);
-    pointer-events: none;
-}
-
-    #crop-frame.circle {
-        border-radius: 50%;
-    }
-
-    #crop-frame .handle {
-        position: absolute;
-        width: 16px;
-        height: 16px;
-        background: var(--mud-palette-primary);
-        border-radius: 50%;
-        border: 2px solid white;
-        pointer-events: auto;
-    }
-
-.handle-nw {
-    left: -10px;
-    top: -10px;
-    cursor: nw-resize;
-}
-
-.handle-ne {
-    right: -10px;
-    top: -10px;
-    cursor: ne-resize;
-}
-
-.handle-sw {
-    left: -10px;
-    bottom: -10px;
-    cursor: sw-resize;
-}
-
-.handle-se {
-    right: -10px;
-    bottom: -10px;
-    cursor: se-resize;
-}
-
-.full-width {
-    width: 100%;
-    display: flex;
-}
-
+/* ===================================
+   11. 一括編集パネル
+=================================== */
 .editing-panel {
-    background: #fff7e6; /* 薄いオレンジ */
+    background: #fff7e6;
     border-left: 4px solid #ffa726;
 }
 
+/* ===================================
+   12. 商品一覧サムネイル
+=================================== */
 .variant-thumb {
     width: 48px;
     height: 48px;
-    object-fit: contain; /* ← これがポイント */
+    object-fit: contain;
     background: transparent;
     border-radius: 4px;
     margin-right: 8px;
@@ -342,4 +254,18 @@ code {
     border-radius: 4px;
 }
 
+/* ===================================
+   13. ヘッダー（AppBar）
+=================================== */
+.full-width {
+    width: 100%;
+    display: flex;
+}
 
+.header-title {
+    max-width: 60vw;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: clamp(14px, 4vw, 20px);
+}
