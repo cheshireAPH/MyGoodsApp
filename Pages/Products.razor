@@ -231,7 +231,61 @@
                         <text> / @productGroup.First().Price.Value.ToString("N0") 円</text>
                     }
                 </span>
+
+                <!-- ★ 親商品一括編集ボタン -->
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Primary"
+                           Class="ml-2"
+                           OnClick="@(() => StartGroupEdit(productGroup))">
+                    一括編集
+                </MudButton>
+
             </MudText>
+
+            @if (productGroup.Any(x => x.IsGroupEditing))
+            {
+                <MudPaper Class="pa-3 ml-4 mb-2 editing-panel" Elevation="1">
+
+                    @foreach (var item in productGroup)
+                    {
+                        <div class="d-flex align-center mb-2">
+
+                            @if (!string.IsNullOrEmpty(item.ImageUrl))
+                            {
+                                <img src="@item.ImageUrl"
+                                     style="width:48px;height:48px;object-fit:cover;border-radius:4px;margin-right:8px;" />
+                            }
+
+                            <div style="width:200px;">@item.VariantName</div>
+
+                            <MudNumericField @bind-Value="item.TempOwned"
+                                             Min="0"
+                                             Style="width:80px;" />
+
+                            <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                           OnClick="@(() => item.TempOwned++)" />
+
+                            <MudIconButton Icon="@Icons.Material.Filled.Remove"
+                                           Disabled="@(item.TempOwned == 0)"
+                                           OnClick="@(() => item.TempOwned--)" />
+                        </div>
+                    }
+
+                    <MudStack Row Class="mt-2">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   OnClick="@(() => SaveGroupEdit(productGroup))">
+                            保存
+                        </MudButton>
+
+                        <MudButton Variant="Variant.Text" Color="Color.Secondary"
+                                   OnClick="@(() => CancelGroupEdit(productGroup))">
+                            キャンセル
+                        </MudButton>
+                    </MudStack>
+
+                </MudPaper>
+            }
+
 
             @foreach (var item in productGroup.OrderBy(x => x.SourceOrderIndex).ThenBy(x => x.OrderIndex))
             {
@@ -251,6 +305,38 @@
             }
         }
     };
+
+    void StartGroupEdit(IEnumerable<VariantListItem> group)
+    {
+        foreach (var item in group)
+        {
+            item.IsGroupEditing = true;
+            item.TempOwned = item.Owned; // 初期値コピー
+        }
+    }
+
+    async Task SaveGroupEdit(IEnumerable<VariantListItem> group)
+    {
+        foreach (var item in group)
+        {
+            item.Owned = item.TempOwned;
+
+            await Supabase.Client.From<ProductVariant>().Update(new ProductVariant
+            {
+                Id = item.VariantId,
+                Owned = item.Owned,
+                Wanted = item.Wanted
+            });
+
+            item.IsGroupEditing = false;
+        }
+    }
+
+    void CancelGroupEdit(IEnumerable<VariantListItem> group)
+    {
+        foreach (var item in group)
+            item.IsGroupEditing = false;
+    }
 
     /// <summary>個数表示</summary>
     private string GetDisplayValue(VariantListItem item, string mode)
@@ -287,6 +373,11 @@
         public string? ImageUrl { get; set; }
         public int Owned { get; set; }
         public int Wanted { get; set; }
+
+        //個数編集用
+        public Guid VariantId { get; set; }
+        public bool IsGroupEditing { get; set; } = false;
+        public int TempOwned { get; set; }
 
         // 所持タブ用（希望数を上限にする）
         public int OwnedForDisplay =>

@@ -319,3 +319,8 @@ code {
     width: 100%;
     display: flex;
 }
+
+.editing-panel {
+    background: #fff7e6; /* 薄いオレンジ */
+    border-left: 4px solid #ffa726;
+}
