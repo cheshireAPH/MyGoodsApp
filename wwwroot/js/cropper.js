@@ -4,6 +4,9 @@ let aspectLocked = false;
 window.cropper = (function () {
     let container, frame, image;
 
+    // overlay
+    let overlayTop, overlayBottom, overlayLeft, overlayRight;
+
     // 画像の実座標
     let imgLeft = 0;
     let imgTop = 0;
@@ -33,6 +36,40 @@ window.cropper = (function () {
     // ピンチズーム
     let pinching = false;
     let lastPinchDistance = 0;
+
+    /* ------------------------------
+       overlay 更新
+    ------------------------------ */
+    function updateOverlay() {
+        if (!container || !frame) return;
+
+        const cRect = container.getBoundingClientRect();
+        const fRect = frame.getBoundingClientRect();
+
+        // 上
+        overlayTop.style.top = "0px";
+        overlayTop.style.left = "0px";
+        overlayTop.style.width = cRect.width + "px";
+        overlayTop.style.height = (fRect.top - cRect.top) + "px";
+
+        // 下
+        overlayBottom.style.left = "0px";
+        overlayBottom.style.width = cRect.width + "px";
+        overlayBottom.style.top = (fRect.bottom - cRect.top) + "px";
+        overlayBottom.style.height = (cRect.bottom - fRect.bottom) + "px";
+
+        // 左
+        overlayLeft.style.top = (fRect.top - cRect.top) + "px";
+        overlayLeft.style.left = "0px";
+        overlayLeft.style.width = (fRect.left - cRect.left) + "px";
+        overlayLeft.style.height = fRect.height + "px";
+
+        // 右
+        overlayRight.style.top = (fRect.top - cRect.top) + "px";
+        overlayRight.style.left = (fRect.right - cRect.left) + "px";
+        overlayRight.style.width = (cRect.right - fRect.right) + "px";
+        overlayRight.style.height = fRect.height + "px";
+    }
 
     /* ------------------------------
        画像の位置・サイズを反映
@@ -72,6 +109,8 @@ window.cropper = (function () {
         frame.style.height = size + "px";
         frame.style.left = (cw - size) / 2 + "px";
         frame.style.top = (ch - size) / 2 + "px";
+
+        updateOverlay();
     }
 
     /* ------------------------------
@@ -90,6 +129,7 @@ window.cropper = (function () {
         imgLeft = panImgStartLeft + (x - panStartX);
         imgTop = panImgStartTop + (y - panStartY);
         applyImageRect();
+        updateOverlay();
     }
 
     /* ------------------------------
@@ -156,6 +196,8 @@ window.cropper = (function () {
         frame.style.top = newTop + "px";
         frame.style.width = newW + "px";
         frame.style.height = newH + "px";
+
+        updateOverlay();
     }
 
     /* ------------------------------
@@ -191,6 +233,7 @@ window.cropper = (function () {
         imgTop = cy - (cy - imgTop) * (imgHeight / oldHeight);
 
         applyImageRect();
+        updateOverlay();
     }
 
     /* ------------------------------
@@ -253,6 +296,7 @@ window.cropper = (function () {
 
         lastPinchDistance = dist;
         applyImageRect();
+        updateOverlay();
     }
 
     /* ------------------------------
@@ -362,8 +406,15 @@ window.cropper = (function () {
             image = document.getElementById("edit-image");
             if (!container || !frame || !image) return;
 
+            // overlay 取得
+            overlayTop = document.querySelector(".crop-overlay.top");
+            overlayBottom = document.querySelector(".crop-overlay.bottom");
+            overlayLeft = document.querySelector(".crop-overlay.left");
+            overlayRight = document.querySelector(".crop-overlay.right");
+
             initImageAndFrame();
             attachEvents();
+            updateOverlay();
         },
 
         getFrame: function () {
