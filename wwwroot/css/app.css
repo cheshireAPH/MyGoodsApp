@@ -209,7 +209,7 @@ a, .btn-link {
 .cropper-main {
     flex: 1;
     overflow: hidden;
-    background: black;
+    background: transparent;
 }
 
 #crop-container {
@@ -224,6 +224,58 @@ a, .btn-link {
     position: absolute;
     user-select: none;
     touch-action: none;
+}
+
+/* トリミング枠の外側を暗くするオーバーレイ */
+.crop-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+}
+
+/* トリミング枠 */
+#crop-frame {
+    position: absolute;
+    border: 2px dashed #fff;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.handle {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border: 2px solid #000;
+    box-sizing: border-box;
+    pointer-events: auto;
+}
+
+.handle-nw {
+    top: -8px;
+    left: -8px;
+    cursor: nwse-resize;
+}
+
+.handle-ne {
+    top: -8px;
+    right: -8px;
+    cursor: nesw-resize;
+}
+
+.handle-sw {
+    bottom: -8px;
+    left: -8px;
+    cursor: nesw-resize;
+}
+
+.handle-se {
+    bottom: -8px;
+    right: -8px;
+    cursor: nwse-resize;
 }
 
 /* ===================================
@@ -267,7 +319,8 @@ a, .btn-link {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: clamp(14px, 4vw, 20px);
+    font-size: clamp(14px, 4vw, 20px) !important; 
+    line-height: 1.2;
 }
 
 /* ===================================
