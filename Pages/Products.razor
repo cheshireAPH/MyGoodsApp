@@ -154,6 +154,7 @@
                      ReleaseDate = p.ReleaseDate,
                      ReleaseDateText = p.ReleaseDateText,
                      Price = p.Price,
+                     VariantId = v.Id,
                      VariantName = v.Name,
                      DisplayName = string.IsNullOrWhiteSpace(v.Name)
                          ? p.Title
@@ -320,16 +321,26 @@
 
     void StartGroupEdit(IEnumerable<VariantListItem> group)
     {
-        foreach (var item in group)
+        var productId = group.First().ProductId;
+
+        var allItems = VariantItems
+            .Where(x => x.ProductId == productId);
+
+        foreach (var item in allItems)
         {
             item.IsGroupEditing = true;
-            item.TempOwned = item.Owned; // 初期値コピー
+            item.TempOwned = item.Owned;
         }
     }
 
     async Task SaveGroupEdit(IEnumerable<VariantListItem> group)
     {
-        foreach (var item in group)
+        var productId = group.First().ProductId;
+
+        var allItems = VariantItems
+            .Where(x => x.ProductId == productId);
+
+        foreach (var item in allItems)
         {
             item.Owned = item.TempOwned;
 
@@ -346,7 +357,12 @@
 
     void CancelGroupEdit(IEnumerable<VariantListItem> group)
     {
-        foreach (var item in group)
+        var productId = group.First().ProductId;
+
+        var allItems = VariantItems
+            .Where(x => x.ProductId == productId);
+
+        foreach (var item in allItems)
             item.IsGroupEditing = false;
     }
 
