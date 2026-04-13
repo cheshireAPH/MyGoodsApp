@@ -155,6 +155,7 @@
                      ReleaseDateText = p.ReleaseDateText,
                      Price = p.Price,
                      VariantId = v.Id,
+                     SourceId = v.SourceId,
                      VariantName = v.Name,
                      DisplayName = string.IsNullOrWhiteSpace(v.Name)
                          ? p.Title
@@ -346,8 +347,13 @@
             await Supabase.Client.From<ProductVariant>().Update(new ProductVariant
             {
                 Id = item.VariantId,
+                ProductId = item.ProductId,        // ★ 必須
+                SourceId = item.SourceId,          // ★ 必須
+                Name = item.VariantName,           // ★ 必須
+                OrderIndex = item.OrderIndex,      // ★ 必須（NOT NULL の場合）
                 Owned = item.Owned,
-                Wanted = item.Wanted
+                Wanted = item.Wanted,
+                ImageUrl = item.ImageUrl           // ★ null 許可なら不要
             });
 
             item.IsGroupEditing = false;
@@ -459,6 +465,7 @@
 
         //個数編集用
         public Guid VariantId { get; set; }
+        public Guid SourceId { get; set; }
         public bool IsGroupEditing { get; set; } = false;
         public int TempOwned { get; set; }
 
