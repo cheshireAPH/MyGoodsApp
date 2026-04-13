@@ -523,6 +523,9 @@
 
     async Task OpenEditDialog(ProductVariantViewModel variant)
     {
+        if (!variant.Id.HasValue)
+            variant.Id = Guid.NewGuid();
+        
         if (variant.TempImageBytes == null)
         {
             try
