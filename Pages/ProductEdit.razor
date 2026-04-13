@@ -786,18 +786,17 @@
                 if (v.TempImageBytes != null)
                 {
                     var bucket = Supabase.Client.Storage.From("variants");
+
                     var fileName = $"{v.Id ?? Guid.NewGuid()}.png";
+                    var path = $"variants/{fileName}";
 
-                    // 既存削除
-                    await bucket.Remove(fileName);
+                    // ★ Remove はフルパスで指定しないと削除されない
+                    await bucket.Remove(path);
 
-                    // アップロード
-                    await bucket.Upload(v.TempImageBytes, fileName);
+                    // ★ Upload は2引数版しか存在しない（overwrite も FileOptions も無い）
+                    await bucket.Upload(v.TempImageBytes, path);
 
-                    // URL セット
                     v.ImageUrl = bucket.GetPublicUrl(fileName);
-
-                    // 一時データクリア
                     v.TempImageBytes = null;
                 }
             }
