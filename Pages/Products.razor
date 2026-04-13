@@ -260,7 +260,7 @@
                 var productId = productGroup.First().ProductId;
                 var allItems = VariantItems.Where(x => x.ProductId == productId);
 
-                <MudPaper Class="pa-3 ml-4 mb-2 editing-panel" Elevation="1">
+                <MudPaper Class="pa-3 ml-4 mb-2 editing-panel" Elevation="0">
                     @foreach (var item in allItems)
                     {
                         <div class="d-flex align-center mb-2">

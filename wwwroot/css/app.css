@@ -304,8 +304,8 @@ a, .btn-link {
    11. 一括編集パネル
 =================================== */
 .editing-panel {
-    background: #fff7e6;
-    border-left: 4px solid #ffa726;
+    background: #fff7e6 !important;
+    border-left: 4px solid #ffa726 !important;
 }
 
 /* ===================================
