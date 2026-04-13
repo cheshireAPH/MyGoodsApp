@@ -210,7 +210,7 @@
     /// <summary>タブ表示共通処理</summary>
     RenderFragment RenderProductGroups(IEnumerable<VariantListItem> items, string mode, string color) => __builder =>
     {
-        foreach (var productGroup in items.GroupBy(x => x.ProductTitle))
+        foreach (var productGroup in items.GroupBy(x => x.ProductId))
         {
             @if (IsImageMode)
             {
@@ -227,7 +227,7 @@
             <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
                      Style=@($"border-left:4px solid {color};padding-left:8px;")>
                 <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
-                    @productGroup.Key
+                    @productGroup.First().ProductTitle
                 </MudLink>
 
                 <!-- ★ 発売日・金額の表示 -->
@@ -256,13 +256,13 @@
             //個数編集
             @if (productGroup.Any(x => x.IsGroupEditing))
             {
-                <MudPaper Class="pa-3 ml-4 mb-2 editing-panel" Elevation="1">
+                var productId = productGroup.First().ProductId;
+                var allItems = VariantItems.Where(x => x.ProductId == productId);
 
-                    @foreach (var item in productGroup)
+                <MudPaper Class="pa-3 ml-4 mb-2 editing-panel" Elevation="1">
+                    @foreach (var item in allItems)
                     {
                         <div class="d-flex align-center mb-2">
-
-                            <!-- 画像なし -->
                             <div style="width:200px;">@item.VariantName</div>
 
                             <MudNumericField @bind-Value="item.TempOwned"
@@ -289,7 +289,6 @@
                             キャンセル
                         </MudButton>
                     </MudStack>
-
                 </MudPaper>
             }
 
