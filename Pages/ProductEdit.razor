@@ -787,16 +787,18 @@
                 {
                     var bucket = Supabase.Client.Storage.From("variants");
 
-                    var fileName = $"{v.Id ?? Guid.NewGuid()}.png";
-                    var path = $"variants/{fileName}";
+                    // ★ 既存の ImageUrl からファイル名を抽出
+                    var fileName = GetFileName(v);
 
-                    // ★ Remove はフルパスで指定しないと削除されない
-                    await bucket.Remove(path);
+                    // ★ Remove はファイル名だけ
+                    await bucket.Remove(fileName);
 
-                    // ★ Upload は2引数版しか存在しない（overwrite も FileOptions も無い）
-                    await bucket.Upload(v.TempImageBytes, path);
+                    // ★ Upload もファイル名だけ
+                    await bucket.Upload(v.TempImageBytes, fileName);
 
+                    // ★ 公開URL
                     v.ImageUrl = bucket.GetPublicUrl(fileName);
+
                     v.TempImageBytes = null;
                 }
             }
@@ -881,6 +883,19 @@
         }
 
         GoBack();
+    }
+
+    string GetFileName(ProductVariantViewModel v)
+    {
+        // 既存の ImageUrl が Supabase の URL の場合
+        if (!string.IsNullOrWhiteSpace(v.ImageUrl) &&
+            v.ImageUrl.StartsWith("https://"))
+        {
+            return Path.GetFileName(new Uri(v.ImageUrl).AbsolutePath);
+        }
+
+        // 新規の場合は GUID を生成
+        return $"{Guid.NewGuid()}.png";
     }
 
 
