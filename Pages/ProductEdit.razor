@@ -614,14 +614,14 @@
         if (string.IsNullOrWhiteSpace(s.Source.Url))
             return;
 
-        var imageUrl = ConvertToImageUrl(s.Source.Url);
-        if (imageUrl == null)
+        var urls = ConvertToImageUrl(s.Source.Url);
+        if (urls == null)
             return;
 
         var http = new HttpClient();
         var response = await http.PostAsJsonAsync(
             "https://mygoodsapi.onrender.com/api/ImageProxy",
-            new { url = imageUrl }
+            new { urls }
         );
 
         // ★ ここが重要：失敗したら return
@@ -643,7 +643,7 @@
 
     #region サイト別画像取得
 
-    string ConvertToImageUrl(string url)
+    string[] ConvertToImageUrl(string url)
     {
         if (url.Contains("movic.jp"))
             return ConvertMovic(url);
@@ -658,19 +658,26 @@
         return null;
     }
 
-    string ConvertMovic(string url)
+    string[] ConvertMovic(string url)
     {
-        // g/ の後ろのコードを取得（先頭の g を含む場合がある）
+        // g/ の後ろのコードを取得（例：g05377-00603-00039）
         var match = Regex.Match(url, @"g/([A-Za-z0-9\-]+)/?$");
         if (!match.Success) return null;
 
         var code = match.Groups[1].Value;
 
-        // 先頭に g が付いていたら削除
+        // 先頭の g を削除
         if (code.StartsWith("g"))
             code = code.Substring(1);
 
-        return $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/L/{code}-l.jpg";
+        // ★ 画像 URL 候補を全部返す
+        return new[]
+        {
+        $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/L/{code}-l.jpg",
+        $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/{code}.jpg",
+        $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/M/{code}.jpg",
+        $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/L/{code}.jpg"
+        };
     }
 
     # endregion
