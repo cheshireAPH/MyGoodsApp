@@ -660,24 +660,28 @@
 
     string[] ConvertMovic(string url)
     {
-        // g/ の後ろのコードを取得（例：g05377-00603-00039）
         var match = Regex.Match(url, @"g/([A-Za-z0-9\-]+)/?$");
         if (!match.Success) return null;
 
         var code = match.Groups[1].Value;
 
-        // 先頭の g を削除
         if (code.StartsWith("g"))
             code = code.Substring(1);
 
-        // ★ 画像 URL 候補を全部返す
         return new[]
         {
+        // ★ 最優先：ページで使われる大画像
+        $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/L/{code}.jpg",
+
+        // ★ 次点：-l 付きの大画像
         $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/L/{code}-l.jpg",
-        $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/{code}.jpg",
+
+        // ★ 中サイズ
         $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/M/{code}.jpg",
-        $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/L/{code}.jpg"
-        };
+
+        // ★ 最後の手段：小サイズ
+        $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/{code}.jpg"
+    };
     }
 
     # endregion
