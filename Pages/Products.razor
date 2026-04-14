@@ -87,7 +87,7 @@
             ? "商品一覧"
             : $"商品一覧：{selectedSeriesName}";
 
-        ExitImageMode();
+        ExitSelectMode();
     }
 
     private async Task LoadSeries()
@@ -263,62 +263,63 @@
                 <MudPaper Class="pa-3 ml-4 mb-2 editing-panel" Elevation="0">
                     @foreach (var item in allItems)
                     {
-                        <div class="d-flex align-center mb-2" style="flex-wrap:wrap;">
+                        <div class="d-flex align-center mb-2" style="justify-content:space-between; width:100%; flex-wrap:wrap;">
 
-                            @if (IsImageMode)
-                            {
-                                <MudCheckBox T="bool"
-                                             @bind-Checked="item.IsSelected"
-                                             Style="margin-right:8px;" />
-                            }
-
-                            <!-- 名前（折り返しOK・可変幅） -->
+                            <!-- 左：名前 -->
                             <div style="
                                 flex:1;
                                 min-width:200px;
-                                margin-right:8px;
                                 word-break:break-word;
+                                margin-right:8px;
                                 ">
                                 @item.VariantName
                             </div>
 
-                            <!-- 個数編集ブロック（固定幅） -->
+                            <!-- 右：所持・未収納の編集ブロック -->
                             <div style="
+                                width:200px;
                                 display:flex;
-                                flex-direction:row;
-                                width:180px; /* ★ここで固定幅 */
-                                justify-content:space-between;
+                                flex-direction:column;
+                                text-align:right;
+                                font-size:0.9em;
+                                line-height:1.2;
                                 ">
 
-                                <!-- 所持（2段ミニブロック＋ボタン） -->
-                                <div style="display:flex; flex-direction:column; width:80px;">
-                                    <MudNumericField @bind-Value="item.TempOwned"
-                                                     Min="0"
-                                                     Label="所持"
-                                                     Dense="true"
-                                                     Style="width:80px;" />
-                                    <div class="d-flex">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                                       OnClick="@(() => item.TempOwned++)" />
+                                <!-- 所持 -->
+                                <div class="d-flex align-center" style="justify-content:space-between;">
+                                    <span>所持：</span>
+
+                                    <div class="d-flex align-center">
                                         <MudIconButton Icon="@Icons.Material.Filled.Remove"
                                                        Disabled="@(item.TempOwned == 0)"
                                                        OnClick="@(() => item.TempOwned--)" />
+
+                                        <MudNumericField @bind-Value="item.TempOwned"
+                                                         Min="0"
+                                                         Dense="true"
+                                                         Style="width:60px; margin:0 4px;" />
+
+                                        <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                                       OnClick="@(() => item.TempOwned++)" />
                                     </div>
                                 </div>
 
-                                <!-- 浮動（2段ミニブロック＋ボタン） -->
-                                <div style="display:flex; flex-direction:column; width:80px;">
-                                    <MudNumericField @bind-Value="item.TempFloating"
-                                                     Min="0"
-                                                     Label="未収納"
-                                                     Dense="true"
-                                                     Style="width:80px;" />
-                                    <div class="d-flex">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                                       OnClick="@(() => item.TempFloating++)" />
+                                <!-- 未収納 -->
+                                <div class="d-flex align-center" style="justify-content:space-between; margin-top:4px;">
+                                    <span>未収納：</span>
+
+                                    <div class="d-flex align-center">
                                         <MudIconButton Icon="@Icons.Material.Filled.Remove"
                                                        Disabled="@(item.TempFloating == 0)"
                                                        OnClick="@(() => item.TempFloating--)" />
+
+                                        <MudNumericField @bind-Value="item.TempFloating"
+                                                         Min="0"
+                                                         Dense="true"
+                                                         Style="width:60px; margin:0 4px;" />
+
+                                        <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                                       OnClick="@(() => item.TempFloating++)" />
                                     </div>
                                 </div>
 
@@ -349,6 +350,14 @@
                     <!-- 左：画像 + 名前 -->
                     <div class="d-flex align-center" style="flex:1; min-width:200px; margin-right:8px;">
 
+                    
+                        @if (IsImageMode)
+                        {
+                            <MudCheckBox T="bool"
+                                         @bind-Checked="item.IsSelected"
+                                         Style="margin-right:8px;" />
+                        }
+
                         @if (!string.IsNullOrEmpty(item.ImageUrl))
                         {
                             <img src="@item.ImageUrl"
@@ -365,7 +374,7 @@
 
                     <!-- 右：固定幅の個数ブロック -->
                     <div style="
-                        width:160px;
+                        width:120px;
                         display:flex;
                         flex-direction:column;
                         text-align:right;
@@ -452,13 +461,13 @@
     }
 
     /// <summary>画像生成モード</summary>
-    void EnterImageMode()
+    void EnterSelectMode()
     {
         IsImageMode = true;
 
         LayoutState.SetState(
-            title: "画像生成モード",
-            onBack: EventCallback.Factory.Create(this, ExitImageMode),
+            title: "選択",
+            onBack: EventCallback.Factory.Create(this, ExitSelectMode),
             onSave: EventCallback.Factory.Create(this, GoToImageGeneratePage),
             leftMode: HeaderLeftMode.Back,
             showSave: true,
@@ -467,8 +476,8 @@
         );
     }
 
-    /// <summary>画像生成モード終了</summary>
-    void ExitImageMode()
+    /// <summary>選択モード終了</summary>
+    void ExitSelectMode()
     {
         IsImageMode = false;
 
@@ -476,11 +485,11 @@
         LayoutState.SetState(
             title: headerTitle,
             onBack: EventCallback.Factory.Create(this, () => Nav.NavigateTo("series")),
-            onSave: EventCallback.Factory.Create(this, EnterImageMode),
+            onSave: EventCallback.Factory.Create(this, EnterSelectMode),
             leftMode: HeaderLeftMode.Back,
             showSave: true,
             backText: "← 戻る",
-            saveText: "画像生成"
+            saveText: "選択"
         );
     }
 
