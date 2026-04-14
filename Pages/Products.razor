@@ -265,6 +265,13 @@
                     {
                         <div class="d-flex align-center mb-2" style="flex-wrap:wrap;">
 
+                            @if (IsImageMode)
+                            {
+                                <MudCheckBox T="bool"
+                                             @bind-Checked="item.IsSelected"
+                                             Style="margin-right:8px;" />
+                            }
+
                             <!-- 名前（折り返しOK・可変幅） -->
                             <div style="
                                 flex:1;
