@@ -263,85 +263,85 @@
                 <MudPaper Class="pa-3 ml-4 mb-2 editing-panel" Elevation="0">
                     @foreach (var item in allItems)
                     {
-                        <div class="d-flex align-center mb-2" style="justify-content:space-between; width:100%; flex-wrap:wrap;">
+                        <div class="d-flex align-center mb-2"
+     style="justify-content:space-between; width:100%; flex-wrap:nowrap;">
 
-                            <!-- 左：名前 -->
-                            <div style="
-                                flex:1;
-                                min-width:200px;
-                                word-break:break-word;
-                                margin-right:8px;
-                                ">
-                                @item.VariantName
-                            </div>
+    <!-- 左：名前（大1段） -->
+    <div style="
+        flex:1 1 auto;
+        min-width:140px;
+        max-width:calc(100% - 160px);
+        word-break:break-word;
+        margin-right:8px;
+    ">
+        @item.VariantName
+    </div>
 
-                            <!-- 右：所持・未収納の編集ブロック -->
-                            <div style="
-                                width:200px;
-                                display:flex;
-                                flex-direction:column;
-                                text-align:right;
-                                font-size:0.9em;
-                                line-height:1.2;
-                                ">
+    <!-- 右：所持・未収納（小2段） -->
+    <div style="
+        width:160px;
+        display:flex;
+        flex-direction:column;
+        font-size:0.85em;
+        line-height:1.2;
+    ">
 
-                                <!-- 所持 -->
-                                <div class="d-flex align-center" style="justify-content:space-between;">
-                                    <MudNumericField @bind-Value="item.TempOwned"
-                                                     Min="0"
-                                                     Label="所持"
-                                                     Dense="true"
-                                                     HideSpinButtons="true"
-                                                     Size="Size.Small"
-                                                     Style="width:60px; font-size:0.8rem; padding:0;" />
+        <!-- 所持 -->
+        <div class="d-flex align-center" style="justify-content:space-between;">
+            <span>所持：</span>
+            <div class="d-flex align-center">
+                <MudIconButton Icon="@Icons.Material.Filled.Remove"
+                               Size="Size.Small"
+                               Variant="Variant.Text"
+                               Disabled="@(item.TempOwned == 0)"
+                               OnClick="@(() => item.TempOwned--)"
+                               Style="min-width:22px; width:22px; height:22px; padding:0;" />
 
-                                    <div class="d-flex">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Remove"
-                                                       Size="Size.Small"
-                                                       Variant="Variant.Text"
-                                                       OnClick="@(() => item.TempOwned--)"
-                                                       Disabled="@(item.TempOwned == 0)"
-                                                       Style="min-width:24px; width:24px; height:24px; padding:0;" />
+                <MudNumericField @bind-Value="item.TempOwned"
+                                 Min="0"
+                                 Dense="true"
+                                 HideSpinButtons="true"
+                                 Size="Size.Small"
+                                 Style="width:40px; font-size:0.8rem; padding:0; margin:0 4px;" />
 
-                                        <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                                       Size="Size.Small"
-                                                       Variant="Variant.Text"
-                                                       OnClick="@(() => item.TempOwned++)"
-                                                       Style="min-width:24px; width:24px; height:24px; padding:0;" />
-                                    </div>
-                                </div>
+                <MudIconButton Icon="@Icons.Material.Filled.Add"
+                               Size="Size.Small"
+                               Variant="Variant.Text"
+                               OnClick="@(() => item.TempOwned++)"
+                               Style="min-width:22px; width:22px; height:22px; padding:0;" />
+            </div>
+        </div>
 
-                                <!-- 未収納 -->
-                                <div class="d-flex align-center" style="justify-content:space-between; margin-top:4px;">
-                                    <MudNumericField @bind-Value="item.TempFloating"
-                                                     Min="0"
-                                                     Label="未収納"
-                                                     Dense="true"
-                                                     HideSpinButtons="true"
-                                                     Size="Size.Small"
-                                                     Style="width:60px; font-size:0.8rem; padding:0;" />
+        <!-- 未収納 -->
+        <div class="d-flex align-center" style="justify-content:space-between; margin-top:4px;">
+            <span>未収納：</span>
+            <div class="d-flex align-center">
+                <MudIconButton Icon="@Icons.Material.Filled.Remove"
+                               Size="Size.Small"
+                               Variant="Variant.Text"
+                               Disabled="@(item.TempFloating == 0)"
+                               OnClick="@(() => item.TempFloating--)"
+                               Style="min-width:22px; width:22px; height:22px; padding:0;" />
 
-                                    <div class="d-flex">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Remove"
-                                                       Size="Size.Small"
-                                                       Variant="Variant.Text"
-                                                       OnClick="@(() => item.TempFloating--)"
-                                                       Disabled="@(item.TempFloating == 0)"
-                                                       Style="min-width:24px; width:24px; height:24px; padding:0;" />
+                <MudNumericField @bind-Value="item.TempFloating"
+                                 Min="0"
+                                 Dense="true"
+                                 HideSpinButtons="true"
+                                 Size="Size.Small"
+                                 Style="width:40px; font-size:0.8rem; padding:0; margin:0 4px;" />
 
-                                        <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                                       Size="Size.Small"
-                                                       Variant="Variant.Text"
-                                                       OnClick="@(() => item.TempFloating++)"
-                                                       Style="min-width:24px; width:24px; height:24px; padding:0;" />
-                                    </div>
-    
-                                
-                                </div>
+                <MudIconButton Icon="@Icons.Material.Filled.Add"
+                               Size="Size.Small"
+                               Variant="Variant.Text"
+                               OnClick="@(() => item.TempFloating++)"
+                               Style="min-width:22px; width:22px; height:22px; padding:0;" />
+            </div>
+        </div>
 
-                            </div>
+    </div>
 
-                        </div>
+</div>
+
                     }
 
                     <MudStack Row Class="mt-2">
