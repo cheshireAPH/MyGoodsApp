@@ -28,6 +28,9 @@ public class ProductVariant : BaseModel
     [Column("owned")]
     public int Owned { get; set; } = 0;
 
+    [Column("Floating")]
+    public int Floating { get; set; }
+
     [Column("wanted")]
     public int Wanted { get; set; } = 0;   // -1 = ∞
 
@@ -43,5 +46,6 @@ public class ProductVariantViewModel
     public byte[]? TempImageBytes { get; set; }
     public int OrderIndex { get; set; }
     public int Owned { get; set; }
+    public int Floating { get; set; }
     public int Wanted { get; set; }
 }

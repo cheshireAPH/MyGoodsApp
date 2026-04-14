@@ -56,12 +56,12 @@
     /// <summary>ほしいものタブ表示</summary>
     private IEnumerable<VariantListItem> WantedItems =>
     VariantItems!
-        .Where(x => x.WantedForDisplay != "0");
+        .Where(x => x.RemainingForWanted != "0");
 
     /// <summary>交換用タブ表示</summary>
     private IEnumerable<VariantListItem> TradeItems =>
     VariantItems!
-        .Where(x => x.TradeForDisplay > 0);
+        .Where(x => x.Extra > 0);
 
     #endregion
 
@@ -263,19 +263,60 @@
                 <MudPaper Class="pa-3 ml-4 mb-2 editing-panel" Elevation="0">
                     @foreach (var item in allItems)
                     {
-                        <div class="d-flex align-center mb-2">
-                            <div style="width:200px;">@item.VariantName</div>
+                        <div class="d-flex align-center mb-2" style="flex-wrap:wrap;">
 
-                            <MudNumericField @bind-Value="item.TempOwned"
-                                             Min="0"
-                                             Style="width:80px;" />
+                            <!-- 名前（折り返しOK・可変幅） -->
+                            <div style="
+                                flex:1;
+                                min-width:200px;
+                                margin-right:8px;
+                                word-break:break-word;
+                                ">
+                                @item.VariantName
+                            </div>
 
-                            <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                           OnClick="@(() => item.TempOwned++)" />
+                            <!-- 個数編集ブロック（固定幅） -->
+                            <div style="
+                                display:flex;
+                                flex-direction:row;
+                                width:180px; /* ★ここで固定幅 */
+                                justify-content:space-between;
+                                ">
 
-                            <MudIconButton Icon="@Icons.Material.Filled.Remove"
-                                           Disabled="@(item.TempOwned == 0)"
-                                           OnClick="@(() => item.TempOwned--)" />
+                                <!-- 所持（2段ミニブロック＋ボタン） -->
+                                <div style="display:flex; flex-direction:column; width:80px;">
+                                    <MudNumericField @bind-Value="item.TempOwned"
+                                                     Min="0"
+                                                     Label="所持"
+                                                     Dense="true"
+                                                     Style="width:80px;" />
+                                    <div class="d-flex">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                                       OnClick="@(() => item.TempOwned++)" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Remove"
+                                                       Disabled="@(item.TempOwned == 0)"
+                                                       OnClick="@(() => item.TempOwned--)" />
+                                    </div>
+                                </div>
+
+                                <!-- 浮動（2段ミニブロック＋ボタン） -->
+                                <div style="display:flex; flex-direction:column; width:80px;">
+                                    <MudNumericField @bind-Value="item.TempFloating"
+                                                     Min="0"
+                                                     Label="未収納"
+                                                     Dense="true"
+                                                     Style="width:80px;" />
+                                    <div class="d-flex">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                                       OnClick="@(() => item.TempFloating++)" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Remove"
+                                                       Disabled="@(item.TempFloating == 0)"
+                                                       OnClick="@(() => item.TempFloating--)" />
+                                    </div>
+                                </div>
+
+                            </div>
+
                         </div>
                     }
 
@@ -296,24 +337,53 @@
 
             @foreach (var item in productGroup.OrderBy(x => x.SourceOrderIndex).ThenBy(x => x.OrderIndex))
             {
-                <div class="d-flex align-center ml-4 mb-2">
+                <div class="d-flex align-center ml-4 mb-2" style="justify-content:space-between; width:100%;">
 
-                    @if (IsImageMode)
-                    {
-                        <MudCheckBox T="bool"
-                                     @bind-Checked="item.IsSelected" />
-                    }
+                    <!-- 左：画像 + 名前 -->
+                    <div class="d-flex align-center" style="flex:1; min-width:200px; margin-right:8px;">
 
-                    @if (!string.IsNullOrEmpty(item.ImageUrl))
-                    {
-                        <img src="@item.ImageUrl"
-                             class="variant-thumb" />
-                    }
+                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                        {
+                            <img src="@item.ImageUrl"
+                                 style="width:48px; height:48px; object-fit:contain; margin-right:8px;" />
+                        }
 
-                    <div>
-                        @item.VariantName
-                        （@GetDisplayValue(item, mode)）
+                        <div style="
+                            flex:1;
+                            word-break:break-word;
+                            ">
+                            @item.VariantName
+                        </div>
                     </div>
+
+                    <!-- 右：固定幅の個数ブロック -->
+                    <div style="
+                        width:160px;
+                        display:flex;
+                        flex-direction:column;
+                        text-align:right;
+                        font-size:0.9em;
+                        line-height:1.2;
+                        ">
+
+                        @if (mode == "owned")
+                        {
+                            <div>所持：@item.OwnedForDisplay</div>
+                            <div style="color:gray;">未収納：@item.UnstoredForDisplay</div>
+                        }
+                        else if (mode == "wanted")
+                        {
+                            <div>所持：@item.OwnedForWantedTab</div>
+                            <div style="color:gray;">残り：@item.RemainingForWanted</div>
+                        }
+                        else if (mode == "trade")
+                        {
+                            <div>在庫：@item.Extra</div>
+                            <div style="color:gray;">手元：@item.HandExtra</div>
+                        }
+
+                    </div>
+
                 </div>
             }
         }
@@ -330,6 +400,7 @@
         {
             item.IsGroupEditing = true;
             item.TempOwned = item.Owned;
+            item.TempFloating = item.Floating;
         }
     }
 
@@ -343,6 +414,7 @@
         foreach (var item in allItems)
         {
             item.Owned = item.TempOwned;
+            item.Floating = item.TempFloating;
 
             await Supabase.Client.From<ProductVariant>().Update(new ProductVariant
             {
@@ -352,6 +424,7 @@
                 Name = item.VariantName,           // ★ 必須
                 OrderIndex = item.OrderIndex,      // ★ 必須（NOT NULL の場合）
                 Owned = item.Owned,
+                Floating = item.Floating,
                 Wanted = item.Wanted,
                 ImageUrl = item.ImageUrl           // ★ null 許可なら不要
             });
@@ -369,18 +442,6 @@
 
         foreach (var item in allItems)
             item.IsGroupEditing = false;
-    }
-
-    /// <summary>個数表示</summary>
-    private string GetDisplayValue(VariantListItem item, string mode)
-    {
-        return mode switch
-        {
-            "owned" => item.OwnedForDisplay.ToString(),
-            "wanted" => item.WantedForDisplay,
-            "trade" => item.TradeForDisplay.ToString(),
-            _ => ""
-        };
     }
 
     /// <summary>画像生成モード</summary>
@@ -461,6 +522,7 @@
         public int OrderIndex { get; set; }
         public string? ImageUrl { get; set; }
         public int Owned { get; set; }
+        public int Floating { get; set; }
         public int Wanted { get; set; }
 
         //個数編集用
@@ -468,33 +530,27 @@
         public Guid SourceId { get; set; }
         public bool IsGroupEditing { get; set; } = false;
         public int TempOwned { get; set; }
+        public int TempFloating { get; set; }
 
         //画像編集モード
         public bool IsSelected { get; set; } = false;
         public bool IsProductSelected { get; set; } = false; // 親商品用
 
 
-        // 所持タブ用（希望数を上限にする）
-        public int OwnedForDisplay =>
-            Wanted <= 0 ? 0 :
-            Owned < Wanted ? Owned : Wanted;
+        public int OwnedCapped => Math.Min(Wanted, Owned);
 
-        // 欲しいタブ用（Wanted - Owned）
-        public string WantedForDisplay
-        {
-            get
-            {
-                if (Wanted == 9999)
-                    return "∞"; // 無限回収
+        // 所持タブ
+        public int OwnedForDisplay => Math.Max(0, OwnedCapped - Floating);
+        public int UnstoredForDisplay => Math.Max(0, OwnedCapped - OwnedForDisplay);
 
-                var diff = Wanted - Owned;
-                return diff > 0 ? diff.ToString() : "0";
-            }
-        }
+        // 欲しいタブ
+        public int OwnedForWantedTab => OwnedCapped;
+        public string RemainingForWanted =>
+            Wanted == 9999 ? "∞" : Math.Max(0, Wanted - Owned).ToString();
 
-        // 交換用タブ用（Owned - Wanted）
-        public int TradeForDisplay =>
-            Owned - Wanted;
+        // 交換用タブ
+        public int Extra => Math.Max(0, Owned - Wanted);
+        public int HandExtra => Math.Max(0, Owned - Math.Max(Wanted, Floating));
     }
 
     #endregion
