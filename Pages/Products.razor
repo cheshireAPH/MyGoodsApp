@@ -442,7 +442,7 @@
                                 在庫：@item.Extra
                             </div>
 
-                            @if (item.HandExtra > 0 && item.HandExtra != item.Extra)
+                            @if (item.HandExtra != item.Extra)
                             {
                                 <div style="font-size:0.75em; color:#888; margin-top:2px;">
                                     手元：@item.HandExtra
@@ -609,7 +609,7 @@
 
         // 所持タブ
         public int OwnedForDisplay => Math.Max(0, OwnedCapped);
-        public int UnstoredForDisplay => Math.Max(0, OwnedCapped - Floating);
+        public int UnstoredForDisplay => Math.Min(OwnedCapped, Floating);
 
         // 欲しいタブ
         public int OwnedForWantedTab => OwnedCapped;
