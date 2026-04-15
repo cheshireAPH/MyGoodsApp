@@ -597,8 +597,8 @@
         public int OwnedCapped => Math.Min(Wanted, Owned);
 
         // 所持タブ
-        public int OwnedForDisplay => Math.Max(0, OwnedCapped - Floating);
-        public int UnstoredForDisplay => Math.Max(0, OwnedCapped - OwnedForDisplay);
+        public int OwnedForDisplay => Math.Max(0, OwnedCapped);
+        public int UnstoredForDisplay => Math.Max(0, OwnedCapped - Floating);
 
         // 欲しいタブ
         public int OwnedForWantedTab => OwnedCapped;
