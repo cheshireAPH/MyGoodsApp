@@ -197,7 +197,7 @@
             .Where(x => !string.IsNullOrWhiteSpace(x.Category))
             .GroupBy(x => x.Category))
         {
-            <MudExpansionPanel Text="@categoryGroup.Key">
+            <MudExpansionPanel Text="@categoryGroup.Key" DisableAnimation="true">
                 @RenderProductGroups(categoryGroup, mode, color)
             </MudExpansionPanel>
         }
