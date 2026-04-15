@@ -615,13 +615,16 @@
             return;
 
         var urls = ConvertToImageUrl(s.Source.Url);
-        if (urls == null)
+        if (urls == null || urls.Length == 0)
+        {
+            Console.WriteLine("URL変換失敗");
             return;
+        }
 
         var http = new HttpClient();
         var response = await http.PostAsJsonAsync(
             "https://mygoodsapi.onrender.com/api/ImageProxy",
-            new { urls }
+            new { urls = urls }
         );
 
         // ★ ここが重要：失敗したら return
@@ -667,8 +670,12 @@
 
         var code = match.Groups[1].Value;
 
+        if (code.StartsWith("g"))
+            code = code.Substring(1);
+
         // 再販コードを補正（90001 → 00001）
         code = ConvertReprintCode(code);
+
 
         // 画像 URL 候補を返す
         return new[]
@@ -677,7 +684,7 @@
         $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/L/{code}-l.jpg",
         $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/M/{code}.jpg",
         $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/{code}.jpg"
-    };
+        };
     }
 
     private string ConvertReprintCode(string code)
