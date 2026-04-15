@@ -660,29 +660,40 @@
 
     string[] ConvertMovic(string url)
     {
+        // g/ の後ろのコードを取得
         var match = Regex.Match(url, @"g/([A-Za-z0-9\-]+)/?$");
-        if (!match.Success) return null;
+        if (!match.Success)
+            return null;
 
         var code = match.Groups[1].Value;
 
-        if (code.StartsWith("g"))
-            code = code.Substring(1);
+        // 再販コードを補正（90001 → 00001）
+        code = ConvertReprintCode(code);
 
+        // 画像 URL 候補を返す
         return new[]
         {
-        // ★ 最優先：ページで使われる大画像
         $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/L/{code}.jpg",
-
-        // ★ 次点：-l 付きの大画像
         $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/L/{code}-l.jpg",
-
-        // ★ 中サイズ
         $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/M/{code}.jpg",
-
-        // ★ 最後の手段：小サイズ
         $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/{code}.jpg"
     };
     }
+
+    private string ConvertReprintCode(string code)
+    {
+        // 例: 05377-00681-90001 → 05377-00681-00001
+        var parts = code.Split('-');
+        if (parts.Length == 3 && parts[2].Length == 5 && parts[2].StartsWith("9"))
+        {
+            // 90001 → 00001
+            parts[2] = "0" + parts[2].Substring(1);
+            return string.Join("-", parts);
+        }
+
+        return code;
+    }
+
 
     # endregion
 
