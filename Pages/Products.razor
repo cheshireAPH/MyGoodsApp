@@ -366,7 +366,6 @@
                      style="
                     position:relative;
                     width:100%;
-                    padding-right:140px;
                     min-height:48px;
                     ">
 
@@ -374,9 +373,10 @@
                     <div class="d-flex align-center"
                          style="
                         flex:1 1 auto;
-                        min-width:150px;
+                        min-width:220px;
                         margin-right:8px;
                         word-break:break-word;
+                        padding-right:20px;
                         ">
                      
                         @if (IsImageMode)
@@ -400,7 +400,7 @@
                     <!-- 右：固定幅の個数ブロック -->
                     <div style="
                         position:absolute;
-                        right:0;
+                        right:20px;
                         top:50%;
                         transform:translateY(-50%);
                         width:120px;
@@ -409,7 +409,6 @@
                         flex-direction:column;
                         line-height:1.2;
                         ">
-
                         @if (mode == "owned")
                         {
                             <div style="font-size:0.95em; font-weight:500;">
