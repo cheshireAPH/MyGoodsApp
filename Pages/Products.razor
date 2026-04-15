@@ -214,45 +214,86 @@
     {
         foreach (var productGroup in items.GroupBy(x => x.ProductId))
         {
-            @if (IsImageMode)
-            {
-                <MudCheckBox T="bool"
-                             @bind-Checked="productGroup.First().IsProductSelected"
-                             OnChanged="@( (bool? value) => OnProductChecked(productGroup, value == true) )" />
-                <MudButton Variant="Variant.Text"
-                           Color="Color.Primary"
-                           OnClick="@(() => SelectFiltered(productGroup))">
-                    全選択
-                </MudButton>
-            }
-
             <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
-                     Style=@($"border-left:4px solid {color};padding-left:8px;")>
-                <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")">
-                    @productGroup.First().ProductTitle
-                </MudLink>
+                     Style=@($"border-left:4px solid {color};")>
 
-                <!-- ★ 発売日・金額の表示 -->
-                <span style="margin-left:8px; color:gray; font-size:0.9em;">
-                    @(
-                        productGroup.First().ReleaseDate?.ToString("yyyy/MM/dd")
-                        ?? productGroup.First().ReleaseDateText
-                        ?? ""
-                    )
-                    @if (productGroup.First().Price.HasValue)
-                    {
-                        <text> / @productGroup.First().Price.Value.ToString("N0") 円</text>
-                    }
-                </span>
+                <div class="product-header d-flex align-center"
+                     style="
+                    width:100%;
+                    justify-content:space-between;
+                    padding-right:20px;
+                    margin-left:12px;
+                    ">
 
-                <!-- ★　個数編集ボタン -->
-                <MudButton Variant="Variant.Text"
-                           Color="Color.Primary"
-                           Class="ml-2"
-                           OnClick="@(() => StartGroupEdit(productGroup))">
-                    個数編集
-                </MudButton>
+                    <!-- 左：チェックボックス -->
+                    <div style="
+                        flex:0 0 auto;
+                        width:@(IsImageMode ? "40px" : "0px");
+                        display:flex;
+                        justify-content:center;
+                        ">
+                        @if (IsImageMode)
+                        {
+                                <MudCheckBox T="bool"
+                                             @bind-Checked="productGroup.First().IsProductSelected"
+                                             OnChanged="@( (bool? value) => OnProductChecked(productGroup, value == true) )" />
+                        }
+                    </div>
+                    <!-- 中央：名前/日付 -->
+                    <div style="
+                        flex:1 1 auto;
+                        display:flex;
+                        flex-direction:column;
+                        min-width:200px;
+                        margin-right:8px;
+                        ">
+                        <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")"
+                                 style="font-size:1.0em; font-weight:600;">
+                            @productGroup.First().ProductTitle
+                        </MudLink>
 
+                        <span style="font-size:0.8em; color:gray; margin-top:2px;">
+                                @(
+                                    productGroup.First().ReleaseDate?.ToString("yyyy/MM/dd")
+                                    ?? productGroup.First().ReleaseDateText
+                                    ?? ""
+                                )
+                        </span>
+                    </div>
+                    <!-- 右：全選択/値段/個数編集 -->
+                    <div style="
+                        width:160px;
+                        text-align:right;
+                        align-items:flex-end;
+                        display:flex;
+                        flex-direction:column;
+                        line-height:1.2;
+                        ">
+                        @if (IsImageMode)
+                        {
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Primary"
+                                       Style="padding:0; justify-content:flex-end;"
+                                       OnClick="@(() => SelectFiltered(productGroup))">
+                                全選択
+                            </MudButton>
+                        }
+
+                        <div style="font-size:0.85em; color:gray;">
+                            @if (productGroup.First().Price.HasValue)
+                            {
+                                <text>@productGroup.First().Price.Value.ToString("N0") 円</text>
+                            }
+                        </div>
+
+                        <MudButton Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   Style="padding:0; justify-content:flex-end;"
+                                   OnClick="@(() => StartGroupEdit(productGroup))">
+                            個数編集
+                        </MudButton>
+                    </div>
+                </div>
             </MudText>
 
             //個数編集
@@ -364,9 +405,10 @@
             {
                 <div class="d-flex align-center ml-4 mb-2"
                      style="
-                    position:relative;
                     width:100%;
                     min-height:48px;
+                    justify-content:space-between;
+                    padding-right:20px;
                     ">
 
                     <!-- 左：画像 + 名前 -->
@@ -376,7 +418,6 @@
                         min-width:220px;
                         margin-right:8px;
                         word-break:break-word;
-                        padding-right:70px;
                         ">
                      
                         @if (IsImageMode)
@@ -399,10 +440,6 @@
 
                     <!-- 右：固定幅の個数ブロック -->
                     <div style="
-                        position:absolute;
-                        right:20px;
-                        top:50%;
-                        transform:translateY(-50%);
                         width:120px;
                         text-align:right;
                         display:flex;
