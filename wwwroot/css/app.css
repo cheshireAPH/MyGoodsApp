@@ -397,3 +397,101 @@ a, .btn-link {
         border-color: #42a5f5;
     }
 
+/* ================================
+   グリッド全体
+================================ */
+.grid-container {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    margin-top: 12px;
+}
+
+/* ================================
+   グリッドのマス
+================================ */
+.grid-item {
+    position: relative;
+    background: white;
+    border-radius: 6px;
+    padding: 4px;
+    min-height: 110px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    /* 並べ替え時のアニメーション */
+    transition: transform 0.15s ease;
+}
+
+/* SortableJS のゴースト */
+.sortable-ghost {
+    opacity: 0.4;
+}
+
+/* ================================
+   画像
+================================ */
+.grid-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+/* ================================
+   テキスト（画像なし）
+================================ */
+.grid-text {
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 4px;
+    color: #555;
+    word-break: break-word;
+}
+
+/* ================================
+   丸数字（個数バッジ）
+================================ */
+.badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: #1976d2;
+    color: white;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    font-size: 0.8rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+}
+
+    .badge.zero {
+        background: #bdbdbd;
+    }
+
+/* ================================
+   枠線（色付き）
+================================ */
+.border-red {
+    border: 3px solid #ef5350;
+}
+
+.border-yellow {
+    border: 3px solid #ffeb3b;
+}
+
+.border-blue {
+    border: 3px solid #42a5f5;
+}
+
+/* ================================
+   選択中のマス（クリックで選択）
+================================ */
+.grid-item.selected {
+    outline: 3px solid #42a5f5;
+    outline-offset: -3px;
+}

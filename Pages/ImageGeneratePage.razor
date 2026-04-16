@@ -1,0 +1,103 @@
+﻿@page "/image-generate"
+@inject ImageGenerateService ImageService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<MudPaper Class="pa-4 mx-auto" MaxWidth="900px">
+
+    <!-- 設定パネル -->
+    <MudStack Row Class="mb-4" AlignItems="AlignItems.Center">
+        <MudNumericField @bind-Value="GridColumns" Min="2" Max="8" Label="列数" />
+        <MudSelect T="string" @bind-Value="CurrentMode" Label="モード">
+            <MudSelectItem Value="@("wanted")">求め</MudSelectItem>
+            <MudSelectItem Value="@("trade")">譲り</MudSelectItem>
+        </MudSelect>
+
+        <MudSelect T="string" @bind-Value="CurrentBorderColor" Label="枠色">
+            <MudSelectItem T="string" Value="@("none")">なし</MudSelectItem>
+            <MudSelectItem T="string" Value="@("red")">赤</MudSelectItem>
+            <MudSelectItem T="string" Value="@("yellow")">黄</MudSelectItem>
+            <MudSelectItem T="string" Value="@("blue")">青</MudSelectItem>
+        </MudSelect>
+
+        <MudButton Variant="Variant.Outlined" OnClick="AddEmptyCell">
+            ＋ 空白追加
+        </MudButton>
+    </MudStack>
+
+    <!-- グリッド -->
+    <div id="grid" class="grid-container" style="@GetGridStyle()">
+        @foreach (var cell in Cells)
+        {
+            <div class="grid-item @GetBorderClass(cell)" data-id="@cell.Id">
+                @if (!string.IsNullOrEmpty(cell.ImageUrl))
+                {
+                    <img src="@cell.ImageUrl" class="grid-img" />
+                }
+                else
+                {
+                    <div class="grid-text">@cell.DisplayName</div>
+                }
+
+                @if (cell.Count > 0)
+                {
+                    <div class="badge">@cell.Count</div>
+                }
+                else
+                {
+                    <div class="badge zero">@cell.Count</div>
+                }
+            </div>
+        }
+    </div>
+
+</MudPaper>
+
+@code {
+    int GridColumns = 4;
+    string CurrentMode = "wanted";
+    string CurrentBorderColor = "none";
+
+    List<GridCell> Cells = new();
+
+    protected override void OnInitialized()
+    {
+        // 選択されたアイテムを受け取る
+        foreach (var v in ImageService.SelectedItems)
+        {
+            Cells.Add(new GridCell
+            {
+                Id = Guid.NewGuid(),
+                ImageUrl = v.ImageUrl,
+                DisplayName = v.DisplayName,
+                Count = CurrentMode == "wanted"
+                    ? Math.Max(0, v.Wanted - v.Owned)
+                    : Math.Max(0, v.Owned - v.Wanted)
+            });
+        }
+    }
+
+    void AddEmptyCell()
+    {
+        Cells.Add(new GridCell
+        {
+            Id = Guid.NewGuid(),
+            ImageUrl = null,
+            DisplayName = "",
+            Count = 0
+        });
+    }
+
+    string GetGridStyle() => $"grid-template-columns: repeat({GridColumns}, 1fr);";
+
+    string GetBorderClass(GridCell c) =>
+        CurrentBorderColor == "none" ? "" : $"border-{CurrentBorderColor}";
+
+    public class GridCell
+    {
+        public Guid Id { get; set; }
+        public string? ImageUrl { get; set; }
+        public string DisplayName { get; set; } = "";
+        public int Count { get; set; }
+    }
+}
