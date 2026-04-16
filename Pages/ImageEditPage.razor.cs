@@ -7,6 +7,7 @@ using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using System.Text.Json;
 
 namespace MyGoodsApp.Pages
 {
@@ -112,8 +113,27 @@ namespace MyGoodsApp.Pages
 
             var base64 = Convert.ToBase64String(cropped);
 
-            await JS.InvokeVoidAsync("postMessageToOpener", variantId.ToString(), base64);
-            await JS.InvokeVoidAsync("close");
+            // ★ PWA 判定
+            var isPwa = await JS.InvokeAsync<bool>("isPwa");
+
+            if (isPwa)
+            {
+                await JS.InvokeVoidAsync("localStorage.setItem", "editedImage",
+                    JsonSerializer.Serialize(new
+                    {
+                        variantId = variantId.ToString(),
+                        base64 = base64
+                    })
+                );
+
+                // ★ PWA：元の編集画面に戻る（状態保持）
+                await JS.InvokeVoidAsync("history.back");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("postMessageToOpener", variantId.ToString(), base64);
+                await JS.InvokeVoidAsync("close");
+            }
         }
 
         byte[] CropRectangle(byte[] originalBytes, int x, int y, int w, int h)
@@ -191,7 +211,18 @@ namespace MyGoodsApp.Pages
 
         private async Task Cancel()
         {
-            await JS.InvokeVoidAsync("close");
+            var isPwa = await JS.InvokeAsync<bool>("isPwa");
+
+            if (isPwa)
+            {
+                // ★ PWA：元の編集画面に戻る（状態保持）
+                await JS.InvokeVoidAsync("history.back");
+            }
+            else
+            {
+                // ★ ブラウザ：別タブを閉じる
+                await JS.InvokeVoidAsync("close");
+            }
         }
 
         string GetPreviewImage()

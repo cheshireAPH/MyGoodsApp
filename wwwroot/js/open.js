@@ -1,12 +1,17 @@
-﻿function isPwa() {
-    return window.matchMedia('(display-mode: standalone)').matches
-        || window.navigator.standalone === true;
-}
+﻿window.openUrl = (url) => {
 
-window.openUrl = (url) => {
-    if (isPwa()) {
+    const isPwa = window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
+
+    // 画像編集ページかどうか判定（URL 前提を壊さない）
+    const isImageEdit = url.startsWith("image-edit/");
+
+    if (isPwa && isImageEdit) {
+        // PWA + 画像編集だけ → 同一タブ遷移
         window.location.href = url;
-    } else {
-        window.open(url, "_blank");
+        return;
     }
+
+    // それ以外は今まで通り
+    window.open(url, "_blank");
 };
