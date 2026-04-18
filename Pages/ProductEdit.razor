@@ -525,17 +525,32 @@
     {
         if (!variant.Id.HasValue)
             variant.Id = Guid.NewGuid();
-        
+
+        // ★ TempImageBytes を最優先（プレビューと同じ）
         if (variant.TempImageBytes == null)
         {
-            try
+            if (!string.IsNullOrEmpty(variant.ImageUrl))
             {
-                var bytes = await Http.GetByteArrayAsync(variant.ImageUrl);
-                variant.TempImageBytes = bytes;
-            }
-            catch
-            {
-                return;
+                try
+                {
+                    // data:image の場合
+                    if (variant.ImageUrl.StartsWith("data:"))
+                    {
+                        var base64 = variant.ImageUrl.Split(',')[1];
+                        variant.TempImageBytes = Convert.FromBase64String(base64);
+                    }
+                    else
+                    {
+                        // Supabase URL の場合
+                        var bytes = await Http.GetByteArrayAsync(variant.ImageUrl);
+                        variant.TempImageBytes = bytes;
+                    }
+                }
+                catch
+                {
+                    // 読み込めなければ画像なしで編集開始
+                    variant.TempImageBytes = null;
+                }
             }
         }
 

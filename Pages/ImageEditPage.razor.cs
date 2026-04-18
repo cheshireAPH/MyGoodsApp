@@ -114,10 +114,17 @@ namespace MyGoodsApp.Pages
             var base64 = Convert.ToBase64String(cropped);
 
             // ★ PWA 判定
-            var isPwa = await JS.InvokeAsync<bool>("isPwa");
+            var hasOpener = await JS.InvokeAsync<bool>("hasOpener");
 
-            if (isPwa)
+            if (hasOpener)
             {
+                // ★ ブラウザ別タブ：postMessage + close
+                await JS.InvokeVoidAsync("postMessageToOpener", variantId.ToString(), base64);
+                await JS.InvokeVoidAsync("close");
+            }
+            else
+            {
+                // ★ PWA / 同一タブ：localStorage + history.back
                 await JS.InvokeVoidAsync("localStorage.setItem", "editedImage",
                     JsonSerializer.Serialize(new
                     {
@@ -126,13 +133,7 @@ namespace MyGoodsApp.Pages
                     })
                 );
 
-                // ★ PWA：元の編集画面に戻る（状態保持）
                 await JS.InvokeVoidAsync("history.back");
-            }
-            else
-            {
-                await JS.InvokeVoidAsync("postMessageToOpener", variantId.ToString(), base64);
-                await JS.InvokeVoidAsync("close");
             }
         }
 
@@ -211,17 +212,15 @@ namespace MyGoodsApp.Pages
 
         private async Task Cancel()
         {
-            var isPwa = await JS.InvokeAsync<bool>("isPwa");
+            var hasOpener = await JS.InvokeAsync<bool>("hasOpener");
 
-            if (isPwa)
+            if (hasOpener)
             {
-                // ★ PWA：元の編集画面に戻る（状態保持）
-                await JS.InvokeVoidAsync("history.back");
+                await JS.InvokeVoidAsync("close");
             }
             else
             {
-                // ★ ブラウザ：別タブを閉じる
-                await JS.InvokeVoidAsync("close");
+                await JS.InvokeVoidAsync("history.back");
             }
         }
 
@@ -239,32 +238,54 @@ namespace MyGoodsApp.Pages
 
         protected override async Task OnInitializedAsync()
         {
+            // ★ 1. DB から Variant を取得（まず基本情報だけ）
             var v = await Supabase.Client
                 .From<ProductVariant>()
                 .Where(x => x.Id == variantId)
                 .Single();
 
-            Variant = new ProductVariantViewModel
-            {
-                Id = v.Id,
-                Name = v.Name,
-                ImageUrl = v.ImageUrl,
-                TempImageBytes = null
-            };
+            Variant.Id = v.Id;
+            Variant.Name = v.Name;
+            Variant.ImageUrl = v.ImageUrl;
 
-            // ★ Supabase の画像を TempImageBytes に読み込む
-            if (Variant.ImageUrl.StartsWith("data:"))
+            // ★ 2. localStorage に編集済み画像があるか確認（PWA用）
+            var editedJson = await JS.InvokeAsync<string>("localStorage.getItem", "editedImage");
+
+            if (!string.IsNullOrEmpty(editedJson))
             {
-                var base64 = Variant.ImageUrl.Split(',')[1];
-                Variant.TempImageBytes = Convert.FromBase64String(base64);
-            }
-            else
-            {
-                // ★ Supabase の URL の場合だけ HTTP で取得
-                Variant.TempImageBytes = await Http.GetByteArrayAsync(Variant.ImageUrl);
+                var obj = JsonSerializer.Deserialize<EditedImageDto>(editedJson);
+
+                if (obj != null && obj.variantId == variantId.ToString())
+                {
+                    Variant.TempImageBytes = Convert.FromBase64String(obj.base64);
+
+                    // 読み終わったので削除
+                    await JS.InvokeVoidAsync("localStorage.removeItem", "editedImage");
+                }
             }
 
-            // ヘッダー設定
+            // ★ 3. TempImageBytes がまだ無い場合だけ ImageUrl を使う（fallback）
+            if (Variant.TempImageBytes == null)
+            {
+                if (!string.IsNullOrEmpty(Variant.ImageUrl))
+                {
+                    if (Variant.ImageUrl.StartsWith("data:"))
+                    {
+                        var base64 = Variant.ImageUrl.Split(',')[1];
+                        Variant.TempImageBytes = Convert.FromBase64String(base64);
+                    }
+                    else
+                    {
+                        Variant.TempImageBytes = await Http.GetByteArrayAsync(Variant.ImageUrl);
+                    }
+                }
+                else
+                {
+                    Variant.TempImageBytes = null;
+                }
+            }
+
+            // ★ ヘッダー設定
             LayoutState.SetState(
                 Variant.Name,
                 EventCallback.Factory.Create(this, Cancel),
@@ -274,6 +295,12 @@ namespace MyGoodsApp.Pages
                 backText: "キャンセル",
                 saveText: "OK"
             );
+        }
+
+        public class EditedImageDto
+        {
+            public string variantId { get; set; }
+            public string base64 { get; set; }
         }
 
         protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -36,3 +36,5 @@ window.initCropperWhenImageReady = function () {
         };
     }
 };
+
+window.hasOpener = () => !!window.opener;
