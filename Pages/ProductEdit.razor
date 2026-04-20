@@ -264,6 +264,12 @@
     private bool IsEditMode => Id.HasValue;
     private bool IsTemplateMode => Nav.Uri.Contains("templates/");
 
+    public class EditedImageDto
+    {
+        public string variantId { get; set; }
+        public string base64 { get; set; }
+    }
+
     #endregion
 
     /* ------------------------------
@@ -578,14 +584,43 @@
         return Task.CompletedTask;
     }
 
+    [JSInvokable]
+    public async Task OnPageShow()
+    {
+        var editedJson = await JS.InvokeAsync<string>("localStorage.getItem", "editedImage");
+
+        if (!string.IsNullOrEmpty(editedJson))
+        {
+            var obj = JsonSerializer.Deserialize<EditedImageDto>(editedJson);
+
+            if (obj != null)
+            {
+                var v = sources
+                    .SelectMany(s => s.Variants)
+                    .FirstOrDefault(x => x.Id == Guid.Parse(obj.variantId));
+
+                if (v != null)
+                {
+                    v.TempImageBytes = Convert.FromBase64String(obj.base64);
+                    v.ImageUrl = $"data:image/png;base64,{obj.base64}";
+                }
+
+                await JS.InvokeVoidAsync("localStorage.removeItem", "editedImage");
+                StateHasChanged();
+            }
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await JS.InvokeVoidAsync("registerProductEditInstance", DotNetObjectReference.Create(this));
+
+            // ★ PWA 用：戻ってきた時に C# を強制実行
+            await JS.InvokeVoidAsync("registerPageShowHandler", DotNetObjectReference.Create(this));
         }
     }
-
 
     /// <summary>URL連番</summary>
     private void GenerateSequentialChildUrls()
@@ -630,20 +665,11 @@
         if (string.IsNullOrWhiteSpace(s.Source.Url))
             return;
 
-        var urls = ConvertToImageUrl(s.Source.Url);
-        if (urls == null || urls.Length == 0)
-        {
-            Console.WriteLine("URL変換失敗");
-            return;
-        }
-
-        var http = new HttpClient();
-        var response = await http.PostAsJsonAsync(
+        var response = await Http.PostAsJsonAsync(
             "https://mygoodsapi.onrender.com/api/ImageProxy",
-            new { urls = urls }
+            new { Url = s.Source.Url }
         );
 
-        // ★ ここが重要：失敗したら return
         if (!response.IsSuccessStatusCode)
         {
             Console.WriteLine($"API error: {response.StatusCode}");
@@ -652,104 +678,12 @@
 
         var bytes = await response.Content.ReadAsByteArrayAsync();
 
-        // ★ 子商品に属する全ての Variant に画像を設定
         foreach (var variant in s.Variants)
         {
             variant.TempImageBytes = bytes;
             variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
         }
     }
-
-    #region サイト別画像取得
-
-    string[] ConvertToImageUrl(string url)
-    {
-        //ムービック
-        if (url.Contains("movic.jp"))
-            return ConvertMovic(url);
-
-        // if (url.Contains("animate-onlineshop.jp"))
-        //     return ConvertAnimate(url);
-
-        // if (url.Contains("suruga-ya.jp"))
-        //     return ConvertSurugaya(url);
-
-        //アニハピ（NEO GATE通販）
-        if (url.Contains("anihapi-online.com"))
-            return ConvertAnihapi(url);
-
-        // 変換できない場合は null
-        return null;
-    }
-
-    string[] ConvertMovic(string url)
-    {
-        // g/ の後ろのコードを取得
-        var match = Regex.Match(url, @"g/([A-Za-z0-9\-]+)/?$");
-        if (!match.Success)
-            return null;
-
-        var code = match.Groups[1].Value;
-
-        if (code.StartsWith("g"))
-            code = code.Substring(1);
-
-        // 再販コードを補正（90001 → 00001）
-        code = ConvertReprintCode(code);
-
-        // 画像 URL 候補を返す
-        return new[]
-        {
-        $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/L/{code}.jpg",
-        $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/L/{code}-l.jpg",
-        $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/M/{code}.jpg",
-        $"https://d38cuxvdcwawa4.cloudfront.net/img/goods/{code}.jpg"
-        };
-    }
-
-    private string ConvertReprintCode(string code)
-    {
-        // 例: 05377-00681-90001 → 05377-00681-00001
-        var parts = code.Split('-');
-        if (parts.Length == 3 && parts[2].Length == 5 && parts[2].StartsWith("9"))
-        {
-            // 90001 → 00001
-            parts[2] = "0" + parts[2].Substring(1);
-            return string.Join("-", parts);
-        }
-
-        return code;
-    }
-
-    string[] ConvertAnihapi(string url)
-    {
-        try
-        {
-            // 商品ページの HTML を取得
-            var html = new HttpClient().GetStringAsync(url).Result;
-
-            // item-main-image の src を抜き出す
-            var match = Regex.Match(
-                html,
-                "<img[^>]*class=\"item-main-image\"[^>]*src=\"([^\"]+)\"",
-                RegexOptions.IgnoreCase
-            );
-
-            if (!match.Success)
-                return null;
-
-            var imgUrl = match.Groups[1].Value;
-
-            // 画像 URL を返す（配列で統一）
-            return new[] { imgUrl };
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    # endregion
 
     void GoBack()
     {

@@ -38,3 +38,9 @@ window.initCropperWhenImageReady = function () {
 };
 
 window.hasOpener = () => !!window.opener;
+
+window.registerPageShowHandler = function (dotnetRef) {
+    window.addEventListener("pageshow", function () {
+        dotnetRef.invokeMethodAsync("OnPageShow");
+    });
+};
