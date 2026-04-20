@@ -664,6 +664,7 @@
 
     string[] ConvertToImageUrl(string url)
     {
+        //ムービック
         if (url.Contains("movic.jp"))
             return ConvertMovic(url);
 
@@ -672,6 +673,10 @@
 
         // if (url.Contains("suruga-ya.jp"))
         //     return ConvertSurugaya(url);
+
+        //アニハピ（NEO GATE通販）
+        if (url.Contains("anihapi-online.com"))
+            return ConvertAnihapi(url);
 
         // 変換できない場合は null
         return null;
@@ -716,6 +721,33 @@
         return code;
     }
 
+    string[] ConvertAnihapi(string url)
+    {
+        try
+        {
+            // 商品ページの HTML を取得
+            var html = new HttpClient().GetStringAsync(url).Result;
+
+            // item-main-image の src を抜き出す
+            var match = Regex.Match(
+                html,
+                "<img[^>]*class=\"item-main-image\"[^>]*src=\"([^\"]+)\"",
+                RegexOptions.IgnoreCase
+            );
+
+            if (!match.Success)
+                return null;
+
+            var imgUrl = match.Groups[1].Value;
+
+            // 画像 URL を返す（配列で統一）
+            return new[] { imgUrl };
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     # endregion
 
