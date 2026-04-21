@@ -86,186 +86,210 @@
             return;
         }
 
-        // ★ Virtualize はここに 1 個だけ
-        <Virtualize TItem="VariantListItem"
-                    Items="@items.ToList()"
-                    Context="item">
+        // Virtualize は「グループの先頭 item」だけを処理する
+        var grouped = items
+            .GroupBy(x => GetGroupLabel(x))
+            .Select(g => new GroupBlock
+            {
+                Label = g.Key,
+                Items = g.ToList()
+            })
+            .ToList();
 
-            @RenderRow(item, mode, color)
+        <Virtualize TItem="GroupBlock"
+                    Items="@grouped"
+                    Context="group">
+
+            @RenderGroupBlock(group, mode, color)
 
         </Virtualize>
     ;
     };
 
     /// <summary>タブ表示共通処理(グループ)</summary>
-    RenderFragment RenderRow(VariantListItem item, string mode, string color) => __builder =>
+    RenderFragment RenderGroupBlock(dynamic group, string mode, string color) => __builder =>
     {
-        // ★ グループヘッダー（カテゴリ・価格・日付・なし）
-        if (IsGroupHeader(item))
-        {
-            <MudPaper Class="mt-4 mb-2 pa-2" Elevation="0">
-                <MudText Typo="Typo.h6" Style="font-weight:600; cursor:pointer;"
-                @onclick="() => ToggleGroup(item)">
-                    @GetGroupLabel(item)
-                </MudText>
+        <MudPaper Class="mt-4 mb-2 pa-2" Elevation="0">
+            <MudText Typo="Typo.h6"
+                     Style="font-weight:600; cursor:pointer;"
+                     @onclick="() => ToggleGroup(group.Label)">
+                @group.Label
+            </MudText>
 
-                <MudCollapse Expanded="@IsGroupExpanded(item)">
+            <MudCollapse Expanded="@IsGroupExpanded(group.Label)">
+                @foreach (var item in group.Items)
+                {
                     @RenderProductBlock(item, mode, color)
-                </MudCollapse>
-            </MudPaper>
-        }
-        else
-        {
-            // グループ内の通常行
-            @RenderProductBlock(item, mode, color)
-        }
+                }
+            </MudCollapse>
+        </MudPaper>
     };
 
     /// <summary>タブ表示共通処理(商品)</summary>
     RenderFragment RenderProductBlock(VariantListItem item, string mode, string color) => __builder =>
     {
-        // ★ 商品ヘッダー
-        if (IsFirstProductItem(item))
+        // 商品ヘッダー
+        if (IsFirstProductItemInGroup(item))
         {
-            <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
-                     Style=@($"border-left:4px solid {color};")>
+            @RenderProductHeader(item, mode, color)
+            ;
 
-                <div class="product-header d-flex align-center"
-                     style="width:100%; justify-content:space-between; padding-right:20px; margin-left:12px;">
+            // 個数編集は「商品ヘッダーの直後だけ」
+            if (item.IsGroupEditing)
+            {
+                var group = GetProductGroup(item.ProductId);
+                @RenderEditPanel(group)
+                ;
+            }
+        }
 
-                    <!-- 左：チェックボックス -->
-                    <div style="flex:0 0 auto; width:@(IsImageMode ? "40px" : "0px"); display:flex; justify-content:center;">
-                        @if (IsImageMode)
-                        {
-                            <MudCheckBox T="bool"
-                                         @bind-Checked="item.IsProductSelected"
-                                         OnChanged="@( (bool? value) => OnProductChecked(GetProductGroup(item.ProductId), value == true) )" />
-                        }
-                    </div>
+        // 排出品行
+        @RenderVariantRow(item, mode)
+    ;
+    };
 
-                    <!-- 中央：商品名・日付 -->
-                    <div style="flex:1 1 auto; display:flex; flex-direction:column; min-width:0px; margin-right:8px;">
-                        <MudLink Href="@($"products/edit/{item.ProductId}")"
-                                 style="font-size:1.0em; font-weight:600;">
-                            @item.ProductTitle
-                        </MudLink>
+    /// <summary>商品ヘッダー</summary>
+    RenderFragment RenderProductHeader(VariantListItem item, string mode, string color) => __builder =>
+    {
+        <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
+                 Style=@($"border-left:4px solid {color};")>
 
-                        <span style="font-size:0.8em; color:gray; margin-top:2px;">
-                            @(item.ReleaseDate?.ToString("yyyy/MM/dd") ?? item.ReleaseDateText ?? "")
-                        </span>
-                    </div>
+            <div class="product-header d-flex align-center"
+                 style="width:100%; justify-content:space-between; padding-right:20px; margin-left:12px;">
 
-                    <!-- 右：全選択・価格・個数編集 -->
-                    <div style="width:60px; text-align:right; display:flex; flex-direction:column; line-height:1.2;">
-                        @if (IsImageMode)
-                        {
-                            <MudButton Variant="Variant.Text" Color="Color.Primary"
-                                       Style="padding:0; justify-content:flex-end;"
-                                       OnClick="@(() => SelectFiltered(GetProductGroup(item.ProductId)))">
-                                全選択
-                            </MudButton>
-                        }
+                <!-- 左：チェックボックス -->
+                <div style="flex:0 0 auto; width:@(IsImageMode ? "40px" : "0px"); display:flex; justify-content:center;">
+                    @if (IsImageMode)
+                    {
+                        <MudCheckBox T="bool"
+                                     @bind-Checked="item.IsProductSelected"
+                                     OnChanged="@( (bool? value) => OnProductChecked(GetProductGroup(item.ProductId), value == true) )" />
+                    }
+                </div>
 
-                        <div style="font-size:0.85em; color:gray;">
-                            @if (item.Price.HasValue)
-                            {
-                                <text>@item.Price.Value.ToString("N0") 円</text>
-                            }
-                        </div>
+                <!-- 中央：商品名・日付 -->
+                <div style="flex:1 1 auto; display:flex; flex-direction:column; min-width:0px; margin-right:8px;">
+                    <MudLink Href="@($"products/edit/{item.ProductId}")"
+                             style="font-size:1.0em; font-weight:600;">
+                        @item.ProductTitle
+                    </MudLink>
 
+                    <span style="font-size:0.8em; color:gray; margin-top:2px;">
+                        @(item.ReleaseDate?.ToString("yyyy/MM/dd") ?? item.ReleaseDateText ?? "")
+                    </span>
+                </div>
+
+                <!-- 右：全選択・価格・個数編集 -->
+                <div style="width:60px; text-align:right; display:flex; flex-direction:column; line-height:1.2;">
+                    @if (IsImageMode)
+                    {
                         <MudButton Variant="Variant.Text" Color="Color.Primary"
                                    Style="padding:0; justify-content:flex-end;"
-                                   OnClick="@(() => StartGroupEdit(GetProductGroup(item.ProductId)))">
-                            個数編集
+                                   OnClick="@(() => SelectFiltered(GetProductGroup(item.ProductId)))">
+                            全選択
                         </MudButton>
+                    }
+
+                    <div style="font-size:0.85em; color:gray;">
+                        @if (item.Price.HasValue)
+                        {
+                            <text>@item.Price.Value.ToString("N0") 円</text>
+                        }
+                    </div>
+
+                    <MudButton Variant="Variant.Text" Color="Color.Primary"
+                               Style="padding:0; justify-content:flex-end;"
+                               OnClick="@(() => StartGroupEdit(GetProductGroup(item.ProductId)))">
+                        個数編集
+                    </MudButton>
+                </div>
+            </div>
+        </MudText>
+    };
+
+    /// <summary>個数編集パネル</summary>
+    RenderFragment RenderEditPanel(IEnumerable<VariantListItem> group) => __builder =>
+    {
+        <MudPaper Class="pa-3 ml-4 mb-2 editing-panel" Elevation="0">
+            @foreach (var v in group)
+            {
+                <div class="d-flex align-center mb-2"
+                     style="justify-content:space-between; width:100%; flex-wrap:nowrap;">
+
+                    <div style="flex:1 1 auto; min-width:140px; max-width:calc(100% - 160px); word-break:break-word; margin-right:8px;">
+                        @v.VariantName
+                    </div>
+
+                    <div style="width:160px; display:flex; flex-direction:column; font-size:0.85em; line-height:1.2;">
+
+                        <!-- 所持 -->
+                        <div class="d-flex align-center" style="justify-content:space-between;">
+                            <span>所持：</span>
+                            <div class="d-flex align-center">
+                                <MudIconButton Icon="@Icons.Material.Filled.Remove"
+                                               Size="Size.Small"
+                                               Variant="Variant.Text"
+                                               Disabled="@(v.TempOwned == 0)"
+                                               OnClick="@(() => v.TempOwned--)" />
+
+                                <MudNumericField @bind-Value="v.TempOwned"
+                                                 Min="0"
+                                                 Dense="true"
+                                                 HideSpinButtons="true"
+                                                 Size="Size.Small"
+                                                 Style="width:40px; font-size:0.8rem; padding:0; margin:0 4px;" />
+
+                                <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                               Size="Size.Small"
+                                               Variant="Variant.Text"
+                                               OnClick="@(() => v.TempOwned++)" />
+                            </div>
+                        </div>
+
+                        <!-- 未収納 -->
+                        <div class="d-flex align-center" style="justify-content:space-between; margin-top:4px;">
+                            <span>未収納：</span>
+                            <div class="d-flex align-center">
+                                <MudIconButton Icon="@Icons.Material.Filled.Remove"
+                                               Size="Size.Small"
+                                               Variant="Variant.Text"
+                                               Disabled="@(v.TempFloating == 0)"
+                                               OnClick="@(() => v.TempFloating--)" />
+
+                                <MudNumericField @bind-Value="v.TempFloating"
+                                                 Min="0"
+                                                 Dense="true"
+                                                 HideSpinButtons="true"
+                                                 Size="Size.Small"
+                                                 Style="width:40px; font-size:0.8rem; padding:0; margin:0 4px;" />
+
+                                <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                               Size="Size.Small"
+                                               Variant="Variant.Text"
+                                               OnClick="@(() => v.TempFloating++)" />
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </MudText>
-        }
+            }
 
-        // ★ 個数編集パネル（foreach）
-        if (item.IsGroupEditing)
-        {
-            var group = GetProductGroup(item.ProductId);
+            <MudStack Row Class="mt-2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="@(() => SaveGroupEdit(group))">
+                    保存
+                </MudButton>
 
-            <MudPaper Class="pa-3 ml-4 mb-2 editing-panel" Elevation="0">
-                @foreach (var v in group)
-                {
-                    <div class="d-flex align-center mb-2"
-                         style="justify-content:space-between; width:100%; flex-wrap:nowrap;">
+                <MudButton Variant="Variant.Text" Color="Color.Secondary"
+                           OnClick="@(() => CancelGroupEdit(group))">
+                    キャンセル
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    };
 
-                        <div style="flex:1 1 auto; min-width:140px; max-width:calc(100% - 160px); word-break:break-word; margin-right:8px;">
-                            @v.VariantName
-                        </div>
-
-                        <div style="width:160px; display:flex; flex-direction:column; font-size:0.85em; line-height:1.2;">
-
-                            <!-- 所持 -->
-                            <div class="d-flex align-center" style="justify-content:space-between;">
-                                <span>所持：</span>
-                                <div class="d-flex align-center">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Remove"
-                                                   Size="Size.Small"
-                                                   Variant="Variant.Text"
-                                                   Disabled="@(v.TempOwned == 0)"
-                                                   OnClick="@(() => v.TempOwned--)" />
-
-                                    <MudNumericField @bind-Value="v.TempOwned"
-                                                     Min="0"
-                                                     Dense="true"
-                                                     HideSpinButtons="true"
-                                                     Size="Size.Small"
-                                                     Style="width:40px; font-size:0.8rem; padding:0; margin:0 4px;" />
-
-                                    <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                                   Size="Size.Small"
-                                                   Variant="Variant.Text"
-                                                   OnClick="@(() => v.TempOwned++)" />
-                                </div>
-                            </div>
-
-                            <!-- 未収納 -->
-                            <div class="d-flex align-center" style="justify-content:space-between; margin-top:4px;">
-                                <span>未収納：</span>
-                                <div class="d-flex align-center">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Remove"
-                                                   Size="Size.Small"
-                                                   Variant="Variant.Text"
-                                                   Disabled="@(v.TempFloating == 0)"
-                                                   OnClick="@(() => v.TempFloating--)" />
-
-                                    <MudNumericField @bind-Value="v.TempFloating"
-                                                     Min="0"
-                                                     Dense="true"
-                                                     HideSpinButtons="true"
-                                                     Size="Size.Small"
-                                                     Style="width:40px; font-size:0.8rem; padding:0; margin:0 4px;" />
-
-                                    <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                                   Size="Size.Small"
-                                                   Variant="Variant.Text"
-                                                   OnClick="@(() => v.TempFloating++)" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                }
-
-                <MudStack Row Class="mt-2">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                               OnClick="@(() => SaveGroupEdit(group))">
-                        保存
-                    </MudButton>
-
-                    <MudButton Variant="Variant.Text" Color="Color.Secondary"
-                               OnClick="@(() => CancelGroupEdit(group))">
-                        キャンセル
-                    </MudButton>
-                </MudStack>
-            </MudPaper>
-        }
-
-        // ★ 排出品行（今の UI のまま）
+    /// <summary>排出品行</summary>
+    RenderFragment RenderVariantRow(VariantListItem item, string mode) => __builder =>
+    {
         <div class="d-flex align-center ml-4 mb-2"
              style="width:100%; min-height:48px; justify-content:space-between; padding-right:20px;">
 
@@ -291,7 +315,6 @@
             </div>
 
             <div style="width:80px; text-align:right; display:flex; flex-direction:column; line-height:1.2;">
-                @* 所持 / 欲しい / 交換用の表示はそのまま *@
                 @if (mode == "owned")
                 {
                     <div style="font-size:0.95em; font-weight:500;">
@@ -335,6 +358,7 @@
         </div>
     };
 
+
     /// <summary>グループ判定</summary>
     bool IsGroupHeader(VariantListItem item)
     {
@@ -373,20 +397,22 @@
         };
     }
 
-    void ToggleGroup(VariantListItem item)
+    void ToggleGroup(string key)
     {
-        var key = GetGroupLabel(item);
-        GroupExpanded[key] = !IsGroupExpanded(item);
+        GroupExpanded[key] = !IsGroupExpanded(key);
     }
 
-    bool IsGroupExpanded(VariantListItem item)
+    bool IsGroupExpanded(string key)
     {
-        var key = GetGroupLabel(item);
         return GroupExpanded.ContainsKey(key) && GroupExpanded[key];
     }
 
-    bool IsFirstProductItem(VariantListItem item)
-        => VariantItems!.FirstOrDefault(x => x.ProductId == item.ProductId) == item;
+    bool IsFirstProductItemInGroup(VariantListItem item)
+    {
+        var groupKey = GetGroupLabel(item);
+        var groupItems = VariantItems!.Where(x => GetGroupLabel(x) == groupKey);
+        return groupItems.FirstOrDefault(x => x.ProductId == item.ProductId) == item;
+    }
 
     IEnumerable<VariantListItem> GetProductGroup(Guid productId)
         => VariantItems!.Where(x => x.ProductId == productId);
@@ -656,6 +682,12 @@
         // 交換用タブ
         public int Extra => Math.Max(0, Owned - Wanted);
         public int HandExtra => Math.Max(0, Owned - Math.Max(Wanted, Floating));
+    }
+
+    public class GroupBlock
+    {
+        public string Label { get; set; } = "";
+        public List<VariantListItem> Items { get; set; } = new();
     }
 
     #endregion
