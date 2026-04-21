@@ -8,15 +8,15 @@
     <!-- 商品一覧切り替えタブ -->
     <MudTabs @bind-ActivePanelIndex="ActiveTab" Class="mb-4">
         <MudTabPanel Text="所持">
-            @RenderTab(OwnedItems, "owned", "#90caf9")
+            @RenderUnifiedList(OwnedItems, "owned", "#90caf9")
         </MudTabPanel>
 
         <MudTabPanel Text="欲しい">
-            @RenderTab(WantedItems, "wanted", "#ffb74d")
+            @RenderUnifiedList(WantedItems, "wanted", "#ffb74d")
         </MudTabPanel>
 
         <MudTabPanel Text="交換用">
-            @RenderTab(TradeItems, "trade", "#81c784")
+            @RenderUnifiedList(TradeItems, "trade", "#81c784")
         </MudTabPanel>
     </MudTabs>
 
@@ -26,6 +26,12 @@
 
 
 @code {
+    #region 定数
+
+    enum GroupMode { Category, Price, ReleaseDate, None }
+
+    #endregion
+
     #region 変数
 
     List<Series> AllSeries = new();
@@ -33,6 +39,8 @@
     int ActiveTab = 0;
 
     string headerTitle = "商品一覧";
+
+    GroupMode CurrentGroupMode = GroupMode.Category;
 
     /// <summary>画像生成モードフラグ</summary>
     bool IsImageMode = false;
@@ -42,6 +50,7 @@
     #endregion
 
     #region プロパティ
+
     [Inject] public LayoutStateService LayoutState { get; set; } = default!;
     [Inject] public ImageGenerateService ImageService { get; set; } = default!;
 
@@ -63,6 +72,315 @@
     VariantItems!
         .Where(x => x.Extra > 0);
 
+    #endregion
+
+    #region メソッド
+
+    /// <summary>タブレンダリング共通処理</summary>
+    RenderFragment RenderUnifiedList(IEnumerable<VariantListItem> items, string mode, string color) => __builder =>
+    {
+        if (items == null || !items.Any())
+        {
+            __builder.AddContent(0, "該当するアイテムがありません");
+            return;
+        }
+
+        // ★ Virtualize はここに 1 個だけ
+        <Virtualize TItem="VariantListItem"
+                    Items="@items.ToList()"
+                    Context="item">
+
+            @RenderRow(item, mode, color)
+
+        </Virtualize>
+    ;
+    };
+
+    /// <summary>タブ表示共通処理</summary>
+    RenderFragment RenderRow(VariantListItem item, string mode, string color) => __builder =>
+    {
+        // ★ グループヘッダー（カテゴリ・価格・日付・なし）
+        if (IsGroupHeader(item))
+        {
+            <MudText Typo="Typo.h6" Class="mt-4 mb-2" Style="font-weight:600;">
+                @GetGroupLabel(item)
+            </MudText>
+        }
+
+        // ★ 商品ヘッダー（商品 → 排出品 の階層は維持）
+        if (IsFirstProductItem(item))
+        {
+            <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
+                     Style=@($"border-left:4px solid {color};")>
+
+                <div class="product-header d-flex align-center"
+                     style="width:100%; justify-content:space-between; padding-right:20px; margin-left:12px;">
+
+                    <!-- 左：チェックボックス -->
+                    <div style="flex:0 0 auto; width:@(IsImageMode ? "40px" : "0px"); display:flex; justify-content:center;">
+                        @if (IsImageMode)
+                        {
+                            <MudCheckBox T="bool"
+                                         @bind-Checked="item.IsProductSelected"
+                                         OnChanged="@( (bool? value) => OnProductChecked(GetProductGroup(item.ProductId), value == true) )" />
+                        }
+                    </div>
+
+                    <!-- 中央：商品名・日付 -->
+                    <div style="flex:1 1 auto; display:flex; flex-direction:column; min-width:0px; margin-right:8px;">
+                        <MudLink Href="@($"products/edit/{item.ProductId}")"
+                                 style="font-size:1.0em; font-weight:600;">
+                            @item.ProductTitle
+                        </MudLink>
+
+                        <span style="font-size:0.8em; color:gray; margin-top:2px;">
+                            @(item.ReleaseDate?.ToString("yyyy/MM/dd") ?? item.ReleaseDateText ?? "")
+                        </span>
+                    </div>
+
+                    <!-- 右：全選択・価格・個数編集 -->
+                    <div style="width:60px; text-align:right; display:flex; flex-direction:column; line-height:1.2;">
+                        @if (IsImageMode)
+                        {
+                            <MudButton Variant="Variant.Text" Color="Color.Primary"
+                                       Style="padding:0; justify-content:flex-end;"
+                                       OnClick="@(() => SelectFiltered(GetProductGroup(item.ProductId)))">
+                                全選択
+                            </MudButton>
+                        }
+
+                        <div style="font-size:0.85em; color:gray;">
+                            @if (item.Price.HasValue)
+                            {
+                                <text>@item.Price.Value.ToString("N0") 円</text>
+                            }
+                        </div>
+
+                        <MudButton Variant="Variant.Text" Color="Color.Primary"
+                                   Style="padding:0; justify-content:flex-end;"
+                                   OnClick="@(() => StartGroupEdit(GetProductGroup(item.ProductId)))">
+                            個数編集
+                        </MudButton>
+                    </div>
+                </div>
+            </MudText>
+        }
+
+        // 排出品行
+        <div class="d-flex align-center ml-4 mb-2"
+             style="width:100%; min-height:48px; justify-content:space-between; padding-right:20px;">
+
+            <div class="d-flex align-center"
+                 style="flex:1 1 auto; min-width:0px; margin-right:8px; word-break:break-word;">
+
+                @if (IsImageMode)
+                {
+                    <MudCheckBox T="bool"
+                                 @bind-Checked="item.IsSelected"
+                                 Style="margin-right:8px;" />
+                }
+
+                @if (!string.IsNullOrEmpty(item.ImageUrl))
+                {
+                    <img src="@item.ImageUrl"
+                         style="width:48px; height:48px; object-fit:contain; margin-right:8px;" />
+                }
+
+                <div style="flex:1;">
+                    @item.VariantName
+                </div>
+            </div>
+
+            <div style="width:80px; text-align:right; display:flex; flex-direction:column; line-height:1.2;">
+                @if (mode == "owned")
+                {
+                    <div style="font-size:0.95em; font-weight:500;">
+                        所持：@item.OwnedForDisplay
+                    </div>
+
+                    @if (item.UnstoredForDisplay > 0)
+                    {
+                        <div style="font-size:0.75em; color:#888; margin-top:2px;">
+                            未収納：@item.UnstoredForDisplay
+                        </div>
+                    }
+                }
+                @if (mode == "wanted")
+                {
+                    <div style="font-size:0.95em; font-weight:500;">
+                        残り：@item.RemainingForWanted
+                    </div>
+
+                    @if (item.OwnedForWantedTab > 0)
+                    {
+                        <div style="font-size:0.75em; color:#888; margin-top:2px;">
+                            所持：@item.OwnedForWantedTab
+                        </div>
+                    }
+                }
+                @if (mode == "trade")
+                {
+                    <div style="font-size:0.95em; font-weight:500;">
+                        在庫：@item.Extra
+                    </div>
+
+                    @if (item.HandExtra != item.Extra)
+                    {
+                        <div style="font-size:0.75em; color:#888; margin-top:2px;">
+                            手元：@item.HandExtra
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    };
+
+    /// <summary>グループ判定</summary>
+    bool IsGroupHeader(VariantListItem item)
+    {
+        switch (CurrentGroupMode)
+        {
+            case GroupMode.Category:
+                return IsFirstOfGroup(item, x => x.Category);
+
+            case GroupMode.Price:
+                return IsFirstOfGroup(item, x => x.Price);
+
+            case GroupMode.ReleaseDate:
+                return IsFirstOfGroup(item, x => x.ReleaseDate);
+
+            case GroupMode.None:
+                return false;
+        }
+        return false;
+    }
+
+    bool IsFirstOfGroup<T>(VariantListItem item, Func<VariantListItem, T> keySelector)
+    {
+        var key = keySelector(item);
+        return VariantItems!.FirstOrDefault(x => EqualityComparer<T>.Default.Equals(keySelector(x), key)) == item;
+    }
+
+    /// <summary>グループラベル表示</summary>
+    string GetGroupLabel(VariantListItem item)
+    {
+        return CurrentGroupMode switch
+        {
+            GroupMode.Category => item.Category ?? "未分類",
+            GroupMode.Price => item.Price?.ToString("N0") + "円" ?? "価格なし",
+            GroupMode.ReleaseDate => item.ReleaseDate?.ToString("yyyy/MM/dd") ?? item.ReleaseDateText ?? "日付なし",
+            _ => ""
+        };
+    }
+
+
+    bool IsFirstProductItem(VariantListItem item)
+        => VariantItems!.FirstOrDefault(x => x.ProductId == item.ProductId) == item;
+
+    IEnumerable<VariantListItem> GetProductGroup(Guid productId)
+        => VariantItems!.Where(x => x.ProductId == productId);
+
+    /// <summary>個数編集開始</summary>
+    void StartGroupEdit(IEnumerable<VariantListItem> group)
+    {
+        var productId = group.First().ProductId;
+
+        foreach (var item in VariantItems!.Where(x => x.ProductId == productId))
+        {
+            item.IsGroupEditing = true;
+            item.TempOwned = item.Owned;
+            item.TempFloating = item.Floating;
+        }
+    }
+
+    /// <summary>個数編集決定</summary>
+    async Task SaveGroupEdit(IEnumerable<VariantListItem> group)
+    {
+        var productId = group.First().ProductId;
+
+        foreach (var item in VariantItems!.Where(x => x.ProductId == productId))
+        {
+            item.Owned = item.TempOwned;
+            item.Floating = item.TempFloating;
+
+            await Supabase.Client.From<ProductVariant>().Update(new ProductVariant
+            {
+                Id = item.VariantId,
+                ProductId = item.ProductId,
+                SourceId = item.SourceId,
+                Name = item.VariantName,
+                OrderIndex = item.OrderIndex,
+                Owned = item.Owned,
+                Floating = item.Floating,
+                Wanted = item.Wanted,
+                ImageUrl = item.ImageUrl
+            });
+
+            item.IsGroupEditing = false;
+        }
+    }
+
+    /// <summary>個数編集キャンセル</summary>
+    void CancelGroupEdit(IEnumerable<VariantListItem> group)
+    {
+        var productId = group.First().ProductId;
+
+        foreach (var item in VariantItems!.Where(x => x.ProductId == productId))
+            item.IsGroupEditing = false;
+    }
+
+    /// <summary>選択モード開始</summary>
+    void EnterSelectMode()
+    {
+        IsImageMode = true;
+
+        LayoutState.SetState(
+            title: "選択",
+            onBack: EventCallback.Factory.Create(this, ExitSelectMode),
+            onSave: EventCallback.Factory.Create(this, GoToImageGeneratePage),
+            leftMode: HeaderLeftMode.Back,
+            showSave: true,
+            backText: "← 戻る",
+            saveText: "OK"
+        );
+    }
+
+    /// <summary>選択モード終了</summary>
+    void ExitSelectMode()
+    {
+        IsImageMode = false;
+
+        LayoutState.SetState(
+            title: headerTitle,
+            onBack: EventCallback.Factory.Create(this, () => Nav.NavigateTo("series")),
+            onSave: EventCallback.Factory.Create(this, EnterSelectMode),
+            leftMode: HeaderLeftMode.Back,
+            showSave: true,
+            backText: "← 戻る",
+            saveText: "選択"
+        );
+    }
+
+    /// <summary>画像生成画面遷移</summary>
+    void GoToImageGeneratePage()
+    {
+        ImageService.SelectedItems = VariantItems!.Where(x => x.IsSelected).ToList();
+        Nav.NavigateTo("image-generate");
+    }
+
+    /// <summary>親商品選択</summary>
+    void OnProductChecked(IEnumerable<VariantListItem> group, bool isChecked)
+    {
+        foreach (var v in group)
+            v.IsSelected = isChecked;
+    }
+
+    /// <summary>全選択</summary>
+    void SelectFiltered(IEnumerable<VariantListItem> items)
+    {
+        foreach (var v in items)
+            v.IsSelected = true;
+    }
     #endregion
 
     // ------------------------------
@@ -182,429 +500,6 @@
         await LoadVariantList();
     }
 
-    #region メソッド
-
-    /// <summary>タブレンダリング共通処理</summary>
-    RenderFragment RenderTab(IEnumerable<VariantListItem> items, string mode, string color) => __builder =>
-    {
-        if (items == null || !items.Any())
-        {
-            __builder.AddContent(0, "該当するアイテムがありません");
-            return;
-        }
-
-        foreach (var categoryGroup in items
-            .Where(x => !string.IsNullOrWhiteSpace(x.Category))
-            .GroupBy(x => x.Category))
-        {
-            <MudExpansionPanel Text="@categoryGroup.Key" DisableAnimation="true">
-                @RenderProductGroups(categoryGroup, mode, color)
-            </MudExpansionPanel>
-        }
-
-        var noCategoryItems = items.Where(x => string.IsNullOrWhiteSpace(x.Category));
-        if (noCategoryItems.Any())
-        {
-            @RenderProductGroups(noCategoryItems, mode, color)
-        }
-    };
-
-    /// <summary>タブ表示共通処理</summary>
-    RenderFragment RenderProductGroups(IEnumerable<VariantListItem> items, string mode, string color) => __builder =>
-    {
-        foreach (var productGroup in items.GroupBy(x => x.ProductId))
-        {
-            <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1"
-                     Style=@($"border-left:4px solid {color};")>
-
-                <div class="product-header d-flex align-center"
-                     style="
-                    width:100%;
-                    justify-content:space-between;
-                    padding-right:20px;
-                    margin-left:12px;
-                    ">
-
-                    <!-- 左：チェックボックス -->
-                    <div style="
-                        flex:0 0 auto;
-                        width:@(IsImageMode ? "40px" : "0px");
-                        display:flex;
-                        justify-content:center;
-                        ">
-                        @if (IsImageMode)
-                        {
-                                <MudCheckBox T="bool"
-                                             @bind-Checked="productGroup.First().IsProductSelected"
-                                             OnChanged="@( (bool? value) => OnProductChecked(productGroup, value == true) )" />
-                        }
-                    </div>
-                    <!-- 中央：名前/日付 -->
-                    <div style="
-                        flex:1 1 auto;
-                        display:flex;
-                        flex-direction:column;
-                        min-width:0px;
-                        margin-right:8px;
-                        ">
-                        <MudLink Href="@($"products/edit/{productGroup.First().ProductId}")"
-                                 style="font-size:1.0em; font-weight:600;">
-                            @productGroup.First().ProductTitle
-                        </MudLink>
-
-                        <span style="font-size:0.8em; color:gray; margin-top:2px;">
-                                @(
-                                    productGroup.First().ReleaseDate?.ToString("yyyy/MM/dd")
-                                    ?? productGroup.First().ReleaseDateText
-                                    ?? ""
-                                )
-                        </span>
-                    </div>
-                    <!-- 右：全選択/値段/個数編集 -->
-                    <div style="
-                        width:60px;
-                        text-align:right;
-                        align-items:flex-end;
-                        display:flex;
-                        flex-direction:column;
-                        line-height:1.2;
-                        ">
-                        @if (IsImageMode)
-                        {
-                            <MudButton Variant="Variant.Text"
-                                       Color="Color.Primary"
-                                       Style="padding:0; justify-content:flex-end;"
-                                       OnClick="@(() => SelectFiltered(productGroup))">
-                                全選択
-                            </MudButton>
-                        }
-
-                        <div style="font-size:0.85em; color:gray;">
-                            @if (productGroup.First().Price.HasValue)
-                            {
-                                <text>@productGroup.First().Price.Value.ToString("N0") 円</text>
-                            }
-                        </div>
-
-                        <MudButton Variant="Variant.Text"
-                                   Color="Color.Primary"
-                                   Style="padding:0; justify-content:flex-end;"
-                                   OnClick="@(() => StartGroupEdit(productGroup))">
-                            個数編集
-                        </MudButton>
-                    </div>
-                </div>
-            </MudText>
-
-            //個数編集
-            @if (productGroup.Any(x => x.IsGroupEditing))
-            {
-                var productId = productGroup.First().ProductId;
-                var allItems = VariantItems.Where(x => x.ProductId == productId);
-
-                <MudPaper Class="pa-3 ml-4 mb-2 editing-panel" Elevation="0">
-                    <Virtualize TItem="VariantListItem"
-                                Items="@allItems.ToList()"
-                                Context="item">
-                        <div class="d-flex align-center mb-2"
-                            style="justify-content:space-between; width:100%; flex-wrap:nowrap;">
-
-                            <!-- 左：名前（大1段） -->
-                            <div style="
-                                flex:1 1 auto;
-                                min-width:140px;
-                                max-width:calc(100% - 160px);
-                                word-break:break-word;
-                                margin-right:8px;
-                            ">
-                                @item.VariantName
-                            </div>
-
-                            <!-- 右：所持・未収納（小2段） -->
-                            <div style="
-                                width:160px;
-                                display:flex;
-                                flex-direction:column;
-                                font-size:0.85em;
-                                line-height:1.2;
-                            ">
-
-                                <!-- 所持 -->
-                                <div class="d-flex align-center" style="justify-content:space-between;">
-                                    <span>所持：</span>
-                                    <div class="d-flex align-center">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Remove"
-                                                       Size="Size.Small"
-                                                       Variant="Variant.Text"
-                                                       Disabled="@(item.TempOwned == 0)"
-                                                       OnClick="@(() => item.TempOwned--)"
-                                                       Style="min-width:22px; width:22px; height:22px; padding:0;" />
-
-                                        <MudNumericField @bind-Value="item.TempOwned"
-                                                         Min="0"
-                                                         Dense="true"
-                                                         HideSpinButtons="true"
-                                                         Size="Size.Small"
-                                                         Style="width:40px; font-size:0.8rem; padding:0; margin:0 4px;" />
-
-                                        <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                                       Size="Size.Small"
-                                                       Variant="Variant.Text"
-                                                       OnClick="@(() => item.TempOwned++)"
-                                                       Style="min-width:22px; width:22px; height:22px; padding:0;" />
-                                    </div>
-                                </div>
-
-                                <!-- 未収納 -->
-                                <div class="d-flex align-center" style="justify-content:space-between; margin-top:4px;">
-                                    <span>未収納：</span>
-                                    <div class="d-flex align-center">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Remove"
-                                                       Size="Size.Small"
-                                                       Variant="Variant.Text"
-                                                       Disabled="@(item.TempFloating == 0)"
-                                                       OnClick="@(() => item.TempFloating--)"
-                                                       Style="min-width:22px; width:22px; height:22px; padding:0;" />
-
-                                        <MudNumericField @bind-Value="item.TempFloating"
-                                                         Min="0"
-                                                         Dense="true"
-                                                         HideSpinButtons="true"
-                                                         Size="Size.Small"
-                                                         Style="width:40px; font-size:0.8rem; padding:0; margin:0 4px;" />
-
-                                        <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                                       Size="Size.Small"
-                                                       Variant="Variant.Text"
-                                                       OnClick="@(() => item.TempFloating++)"
-                                                       Style="min-width:22px; width:22px; height:22px; padding:0;" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </Virtualize>
-
-                    <MudStack Row Class="mt-2">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                                   OnClick="@(() => SaveGroupEdit(productGroup))">
-                            保存
-                        </MudButton>
-
-                        <MudButton Variant="Variant.Text" Color="Color.Secondary"
-                                   OnClick="@(() => CancelGroupEdit(productGroup))">
-                            キャンセル
-                        </MudButton>
-                    </MudStack>
-                </MudPaper>
-            }
-
-
-            <Virtualize TItem="VariantListItem"
-                        Items="@productGroup.OrderBy(x => x.SourceOrderIndex).ThenBy(x => x.OrderIndex).ToList()"
-                        Context="item">
-                <div class="d-flex align-center ml-4 mb-2"
-                         style="
-                        width:100%;
-                        min-height:48px;
-                        justify-content:space-between;
-                        padding-right:20px;
-                        ">
-
-                    <!-- 左：画像 + 名前 -->
-                    <div class="d-flex align-center"
-                         style="
-                        flex:1 1 auto;
-                        min-width:0px;
-                        margin-right:8px;
-                        word-break:break-word;
-                        ">
-                     
-                        @if (IsImageMode)
-                        {
-                            <MudCheckBox T="bool"
-                                         @bind-Checked="item.IsSelected"
-                                         Style="margin-right:8px;" />
-                        }
-
-                        @if (!string.IsNullOrEmpty(item.ImageUrl))
-                        {
-                            <img src="@item.ImageUrl"
-                                 style="width:48px; height:48px; object-fit:contain; margin-right:8px;" />
-                        }
-
-                        <div style="flex:1;">
-                            @item.VariantName
-                        </div>
-                    </div>
-
-                    <!-- 右：固定幅の個数ブロック -->
-                    <div style="
-                        width:80px;
-                        text-align:right;
-                        display:flex;
-                        flex-direction:column;
-                        line-height:1.2;
-                        ">
-                        @if (mode == "owned")
-                        {
-                            <div style="font-size:0.95em; font-weight:500;">
-                                所持：@item.OwnedForDisplay
-                            </div>
-
-                            @if (item.UnstoredForDisplay > 0)
-                            {
-                                <div style="font-size:0.75em; color:#888; margin-top:2px;">
-                                    未収納：@item.UnstoredForDisplay
-                                </div>
-                            }
-                        }
-                        @if (mode == "wanted")
-                        {
-                            <div style="font-size:0.95em; font-weight:500;">
-                                残り：@item.RemainingForWanted
-                            </div>
-
-                            @if (item.OwnedForWantedTab > 0)
-                            {
-                                <div style="font-size:0.75em; color:#888; margin-top:2px;">
-                                    所持：@item.OwnedForWantedTab
-                                </div>
-                            }
-                        }
-                        @if (mode == "trade")
-                        {
-                            <div style="font-size:0.95em; font-weight:500;">
-                                在庫：@item.Extra
-                            </div>
-
-                            @if (item.HandExtra != item.Extra)
-                            {
-                                <div style="font-size:0.75em; color:#888; margin-top:2px;">
-                                    手元：@item.HandExtra
-                                </div>
-                            }
-                        }
-
-                    </div>
-
-                </div>
-            </Virtualize>
-        }
-    };
-
-    void StartGroupEdit(IEnumerable<VariantListItem> group)
-    {
-        var productId = group.First().ProductId;
-
-        var allItems = VariantItems
-            .Where(x => x.ProductId == productId);
-
-        foreach (var item in allItems)
-        {
-            item.IsGroupEditing = true;
-            item.TempOwned = item.Owned;
-            item.TempFloating = item.Floating;
-        }
-    }
-
-    async Task SaveGroupEdit(IEnumerable<VariantListItem> group)
-    {
-        var productId = group.First().ProductId;
-
-        var allItems = VariantItems
-            .Where(x => x.ProductId == productId);
-
-        foreach (var item in allItems)
-        {
-            item.Owned = item.TempOwned;
-            item.Floating = item.TempFloating;
-
-            await Supabase.Client.From<ProductVariant>().Update(new ProductVariant
-            {
-                Id = item.VariantId,
-                ProductId = item.ProductId,        // ★ 必須
-                SourceId = item.SourceId,          // ★ 必須
-                Name = item.VariantName,           // ★ 必須
-                OrderIndex = item.OrderIndex,      // ★ 必須（NOT NULL の場合）
-                Owned = item.Owned,
-                Floating = item.Floating,
-                Wanted = item.Wanted,
-                ImageUrl = item.ImageUrl           // ★ null 許可なら不要
-            });
-
-            item.IsGroupEditing = false;
-        }
-    }
-
-    void CancelGroupEdit(IEnumerable<VariantListItem> group)
-    {
-        var productId = group.First().ProductId;
-
-        var allItems = VariantItems
-            .Where(x => x.ProductId == productId);
-
-        foreach (var item in allItems)
-            item.IsGroupEditing = false;
-    }
-
-    /// <summary>画像生成モード</summary>
-    void EnterSelectMode()
-    {
-        IsImageMode = true;
-
-        LayoutState.SetState(
-            title: "選択",
-            onBack: EventCallback.Factory.Create(this, ExitSelectMode),
-            onSave: EventCallback.Factory.Create(this, GoToImageGeneratePage),
-            leftMode: HeaderLeftMode.Back,
-            showSave: true,
-            backText: "← 戻る",
-            saveText: "OK"
-        );
-    }
-
-    /// <summary>選択モード終了</summary>
-    void ExitSelectMode()
-    {
-        IsImageMode = false;
-
-        //★ ヘッダー設定
-        LayoutState.SetState(
-            title: headerTitle,
-            onBack: EventCallback.Factory.Create(this, () => Nav.NavigateTo("series")),
-            onSave: EventCallback.Factory.Create(this, EnterSelectMode),
-            leftMode: HeaderLeftMode.Back,
-            showSave: true,
-            backText: "← 戻る",
-            saveText: "選択"
-        );
-    }
-
-    /// <summary>画像生成画面遷移</summary>
-    void GoToImageGeneratePage()
-    {
-        ImageService.SelectedItems = VariantItems.Where(x => x.IsSelected).ToList();
-        Nav.NavigateTo("image-generate");
-    }
-
-    /// <summary>親商品チェック</summary>
-    void OnProductChecked(IEnumerable<VariantListItem> group, bool isChecked)
-    {
-        foreach (var v in group)
-        {
-            v.IsSelected = isChecked; // 個数0含む全排出品
-        }
-    }
-
-    /// <summary>全選択</summary>
-    void SelectFiltered(IEnumerable<VariantListItem> items)
-    {
-        foreach (var v in items)
-            v.IsSelected = true;
-    }
-
-    #endregion
-
     #region ViewModel
 
     /// <summary>
@@ -639,18 +534,14 @@
         public bool IsSelected { get; set; } = false;
         public bool IsProductSelected { get; set; } = false; // 親商品用
 
-
         public int OwnedCapped => Math.Min(Wanted, Owned);
-
         // 所持タブ
         public int OwnedForDisplay => Math.Max(0, OwnedCapped);
         public int UnstoredForDisplay => Math.Min(OwnedCapped, Floating);
-
         // 欲しいタブ
         public int OwnedForWantedTab => OwnedCapped;
         public string RemainingForWanted =>
             Wanted == 9999 ? "∞" : Math.Max(0, Wanted - Owned).ToString();
-
         // 交換用タブ
         public int Extra => Math.Max(0, Owned - Wanted);
         public int HandExtra => Math.Max(0, Owned - Math.Max(Wanted, Floating));
