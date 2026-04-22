@@ -487,13 +487,23 @@
             sources.Remove(s);
     }
 
-    void AddVariant(VariantSourceViewModel s) =>
+    void AddVariant(VariantSourceViewModel s)
+    {
         s.Variants.Add(new ProductVariantViewModel());
+
+        // ★ 追加後も詰め直す
+        for (int i = 0; i < s.Variants.Count; i++)
+            s.Variants[i].OrderIndex = i;
+    }
 
     void RemoveVariant(VariantSourceViewModel s, ProductVariantViewModel v)
     {
         if (s.Variants.Count > 1)
             s.Variants.Remove(v);
+
+        // ★ ここで OrderIndex を詰め直す
+        for (int i = 0; i < s.Variants.Count; i++)
+            s.Variants[i].OrderIndex = i;
     }
 
     void MoveVariantUp(VariantSourceViewModel s, int index)
@@ -502,6 +512,10 @@
         var item = s.Variants[index];
         s.Variants.RemoveAt(index);
         s.Variants.Insert(index - 1, item);
+
+        // ★ 詰め直す
+        for (int i = 0; i < s.Variants.Count; i++)
+            s.Variants[i].OrderIndex = i;
     }
 
     void MoveVariantDown(VariantSourceViewModel s, int index)
@@ -510,6 +524,10 @@
         var item = s.Variants[index];
         s.Variants.RemoveAt(index);
         s.Variants.Insert(index + 1, item);
+
+        // ★ 詰め直す
+        for (int i = 0; i < s.Variants.Count; i++)
+            s.Variants[i].OrderIndex = i;
     }
 
     void MoveSourceUp(int index)
