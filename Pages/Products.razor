@@ -309,19 +309,36 @@
             <div class="d-flex align-center"
                  style="flex:1 1 auto; min-width:0px; margin-right:8px; word-break:break-word;">
 
-                @if (IsImageMode)
-                {
-                    <MudCheckBox T="bool"
-                                 @bind-Checked="item.IsSelected"
-                                 Style="margin-right:8px;" />
-                }
+                <!-- 画像枠（固定） -->
+                <div style="width:48px; height:48px; position:relative; margin-right:8px;">
 
-                @if (!string.IsNullOrEmpty(item.ImageUrl))
-                {
-                    <img src="@item.ImageUrl"
-                         style="width:48px; height:48px; object-fit:contain; margin-right:8px;" />
-                }
+                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                    {
+                        <img src="@item.ImageUrl"
+                             style="width:48px; height:48px; object-fit:contain;" />
+                    }
 
+                    @if (IsImageMode)
+                    {
+                        <!-- 選択モード時のオーバーレイ -->
+                        <div style="
+                            position:absolute;
+                            top:0; left:0;
+                            width:48px; height:48px;
+                            background:rgba(255,255,255,0.5);
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            ">
+                            <MudIconButton Icon="@(item.IsSelected
+                                                ? Icons.Material.Filled.CheckCircle
+                                            : Icons.Material.Outlined.RadioButtonUnchecked)"
+                                           Color="Color.Primary"
+                                           Size="Size.Medium"
+                                           OnClick="@(() => item.IsSelected = !item.IsSelected)" />
+                        </div>
+                    }
+                </div>
                 <div style="flex:1;">
                     @item.VariantName
                 </div>
