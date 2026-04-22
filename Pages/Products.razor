@@ -79,69 +79,84 @@
 
     /// <summary>タブレンダリング共通処理</summary>
     RenderFragment RenderUnifiedList(IEnumerable<VariantListItem> items, string mode, string color) => __builder =>
-{
-    if (items == null || !items.Any())
     {
-        __builder.AddContent(0, "該当するアイテムがありません");
-        return;
-    }
+        if (items == null || !items.Any())
+        {
+            __builder.AddContent(0, "該当するアイテムがありません");
+            return;
+        }
 
-    // グループキーだけを Virtualize に渡す
-    var groupKeys = items
-        .GroupBy(x => GetGroupLabel(x))
-        .Select(g => g.Key)
-        .ToList();
+        // グループキーだけを Virtualize に渡す
+        var groupKeys = items
+            .GroupBy(x => GetGroupLabel(x))
+            .Select(g => g.Key)
+            .ToList();
 
-    <Virtualize TItem="string"
-                Items="@groupKeys"
-                Context="groupKey">
+        <Virtualize TItem="string"
+                    Items="@groupKeys"
+                    Context="groupKey">
 
-        @RenderGroupBlock(groupKey, items, mode, color)
+            @RenderGroupBlock(groupKey, items, mode, color)
 
-    </Virtualize>;
-};
+        </Virtualize>;
+    };
 
     /// <summary>タブ表示共通処理(グループ)</summary>
     RenderFragment RenderGroupBlock(string groupKey, IEnumerable<VariantListItem> allItems, string mode, string color) => __builder =>
-{
-    var groupItems = allItems.Where(x => GetGroupLabel(x) == groupKey).ToList();
+    {
+        var groupItems = allItems.Where(x => GetGroupLabel(x) == groupKey).ToList();
 
-    <MudPaper Class="mt-4 mb-2 pa-2" Elevation="0">
-        <MudText Typo="Typo.h6"
-                 Style="font-weight:600; cursor:pointer;"
+        <MudPaper Class="mt-4 mb-2 pa-0" Elevation="1" Style="border-radius:12px; overflow:hidden;">
+            <div class="d-flex align-center"
+                 style="padding:12px 16px; cursor:pointer; background:#fafafa;"
                  @onclick="() => ToggleGroup(groupKey)">
-            @groupKey
-        </MudText>
 
-        <MudCollapse Expanded="@IsGroupExpanded(groupKey)">
-            @foreach (var item in groupItems)
-            {
-                @RenderProductBlock(item, mode, color)
-            }
-        </MudCollapse>
-    </MudPaper>
-};
+                <!-- 左のカラーライン -->
+                <div style="width:6px; height:24px; background:@color; border-radius:3px; margin-right:12px;"></div>
+
+                <!-- グループ名 -->
+                <MudText Typo="Typo.subtitle1" Style="font-weight:600;">
+                    @groupKey
+                </MudText>
+
+                <div style="flex:1;"></div>
+
+                <!-- 開閉アイコン -->
+                <MudIcon Icon="@(
+                                 IsGroupExpanded(groupKey)
+                                     ? Icons.Material.Filled.ExpandLess
+                                     : Icons.Material.Filled.ExpandMore
+                    )" />
+            </div>
+
+            <MudCollapse Expanded="@IsGroupExpanded(groupKey)">
+                <div style="padding:8px 4px 12px 4px;">
+                    @foreach (var item in groupItems)
+                    {
+                        @RenderProductBlock(item, groupItems, mode, color)
+                    }
+                </div>
+            </MudCollapse>
+        </MudPaper>
+    };
 
 
     /// <summary>タブ表示共通処理(商品)</summary>
-    RenderFragment RenderProductBlock(VariantListItem item, string mode, string color) => __builder =>
+    RenderFragment RenderProductBlock(VariantListItem item, IEnumerable<VariantListItem> groupItems, string mode, string color) => __builder =>
     {
-        // 商品ヘッダー
-        if (IsFirstProductItemInGroup(item))
+        if (IsFirstProductItemInGroup(item, groupItems))
         {
             @RenderProductHeader(item, mode, color)
             ;
 
-            // 個数編集は「商品ヘッダーの直後だけ」
             if (item.IsGroupEditing)
             {
-                var group = GetProductGroup(item.ProductId);
-                @RenderEditPanel(group)
+                var productGroup = VariantItems!.Where(x => x.ProductId == item.ProductId);
+                @RenderEditPanel(productGroup)
                 ;
             }
         }
 
-        // 排出品行
         @RenderVariantRow(item, mode)
     ;
     };
@@ -405,10 +420,8 @@
         return GroupExpanded.ContainsKey(key) && GroupExpanded[key];
     }
 
-    bool IsFirstProductItemInGroup(VariantListItem item)
+    bool IsFirstProductItemInGroup(VariantListItem item, IEnumerable<VariantListItem> groupItems)
     {
-        var groupKey = GetGroupLabel(item);
-        var groupItems = VariantItems!.Where(x => GetGroupLabel(x) == groupKey);
         return groupItems.FirstOrDefault(x => x.ProductId == item.ProductId) == item;
     }
 
