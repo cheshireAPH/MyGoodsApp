@@ -403,7 +403,7 @@
     {
         return CurrentGroupMode switch
         {
-            GroupMode.Category => item.Category ?? "未分類",
+            GroupMode.Category => string.IsNullOrWhiteSpace(item.Category) ? "未分類" : item.Category,
             GroupMode.Price => item.Price?.ToString("N0") + "円" ?? "価格なし",
             GroupMode.ReleaseDate => item.ReleaseDate?.ToString("yyyy/MM/dd") ?? item.ReleaseDateText ?? "日付なし",
             _ => ""
