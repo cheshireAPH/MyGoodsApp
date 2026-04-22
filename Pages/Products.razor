@@ -79,51 +79,49 @@
 
     /// <summary>タブレンダリング共通処理</summary>
     RenderFragment RenderUnifiedList(IEnumerable<VariantListItem> items, string mode, string color) => __builder =>
+{
+    if (items == null || !items.Any())
     {
-        if (items == null || !items.Any())
-        {
-            __builder.AddContent(0, "該当するアイテムがありません");
-            return;
-        }
+        __builder.AddContent(0, "該当するアイテムがありません");
+        return;
+    }
 
-        // Virtualize は「グループの先頭 item」だけを処理する
-        var grouped = items
-            .GroupBy(x => GetGroupLabel(x))
-            .Select(g => new GroupBlock
-            {
-                Label = g.Key,
-                Items = g.ToList()
-            })
-            .ToList();
+    // グループキーだけを Virtualize に渡す
+    var groupKeys = items
+        .GroupBy(x => GetGroupLabel(x))
+        .Select(g => g.Key)
+        .ToList();
 
-        <Virtualize TItem="GroupBlock"
-                    Items="@grouped"
-                    Context="group">
+    <Virtualize TItem="string"
+                Items="@groupKeys"
+                Context="groupKey">
 
-            @RenderGroupBlock(group, mode, color)
+        @RenderGroupBlock(groupKey, items, mode, color)
 
-        </Virtualize>
-    ;
-    };
+    </Virtualize>;
+};
 
     /// <summary>タブ表示共通処理(グループ)</summary>
-    RenderFragment RenderGroupBlock(dynamic group, string mode, string color) => __builder =>
-    {
-        <MudPaper Class="mt-4 mb-2 pa-2" Elevation="0">
-            <MudText Typo="Typo.h6"
-                     Style="font-weight:600; cursor:pointer;"
-                     @onclick="() => ToggleGroup(group.Label)">
-                @group.Label
-            </MudText>
+    RenderFragment RenderGroupBlock(string groupKey, IEnumerable<VariantListItem> allItems, string mode, string color) => __builder =>
+{
+    var groupItems = allItems.Where(x => GetGroupLabel(x) == groupKey).ToList();
 
-            <MudCollapse Expanded="@IsGroupExpanded(group.Label)">
-                @foreach (var item in group.Items)
-                {
-                    @RenderProductBlock(item, mode, color)
-                }
-            </MudCollapse>
-        </MudPaper>
-    };
+    <MudPaper Class="mt-4 mb-2 pa-2" Elevation="0">
+        <MudText Typo="Typo.h6"
+                 Style="font-weight:600; cursor:pointer;"
+                 @onclick="() => ToggleGroup(groupKey)">
+            @groupKey
+        </MudText>
+
+        <MudCollapse Expanded="@IsGroupExpanded(groupKey)">
+            @foreach (var item in groupItems)
+            {
+                @RenderProductBlock(item, mode, color)
+            }
+        </MudCollapse>
+    </MudPaper>
+};
+
 
     /// <summary>タブ表示共通処理(商品)</summary>
     RenderFragment RenderProductBlock(VariantListItem item, string mode, string color) => __builder =>
