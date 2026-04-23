@@ -95,10 +95,10 @@
         <Virtualize TItem="string"
                     Items="@groupKeys"
                     Context="groupKey">
-
-            @RenderGroupBlock(groupKey, items, mode, color)
-
-        </Virtualize>;
+            <div @key="groupKey">
+                @RenderGroupBlock(groupKey, items, mode, color)
+            </div>
+        </Virtualize>
     };
 
     /// <summary>タブ表示共通処理(グループ)</summary>
@@ -223,7 +223,9 @@
     /// <summary>個数編集パネル</summary>
     RenderFragment RenderEditPanel(IEnumerable<VariantListItem> group) => __builder =>
     {
-        <MudPaper Class="pa-3 ml-4 mb-2 editing-panel" Elevation="0">
+        <MudPaper Class="pa-3 ml-4 mb-2 editing-panel"
+                  Elevation="0"
+                  Style="max-height:400px; overflow-y:auto;">
             @foreach (var v in group)
             {
                 <div class="d-flex align-center mb-2"
@@ -667,6 +669,8 @@
             .ThenBy(x => x.SourceOrderIndex)
             .ThenBy(x => x.OrderIndex)
             .ToList();
+
+        GroupExpanded.Clear();
     }
 
     private async Task OnSeriesChanged(int? value)
