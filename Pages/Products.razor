@@ -607,21 +607,31 @@
         }
 
         // 2. 子商品（VariantSource）
-        var sourceResult = await Supabase.Client
-            .From<VariantSource>()
-            .Filter("product_id", Operator.In, products.Select(p => p.Id).ToArray())
-            .Get();
+        var sources = new List<VariantSource>();
 
-        var sources = sourceResult.Models;
+        foreach (var p in products)
+        {
+            var result = await Supabase.Client
+                .From<VariantSource>()
+                .Filter("product_id", Operator.Equals, p.Id.ToString())
+                .Get();
+
+            sources.AddRange(result.Models);
+        }
 
         // 3. 排出品（ProductVariant）
-        var variantResult = await Supabase.Client
-            .From<ProductVariant>()
-            .Filter("product_id", Operator.In, products.Select(p => p.Id).ToArray())
-            .Order(x => x.OrderIndex, Ordering.Ascending)
-            .Get();
+        var variants = new List<ProductVariant>();
 
-        var variants = variantResult.Models;
+        foreach (var p in products)
+        {
+            var result = await Supabase.Client
+                .From<ProductVariant>()
+                .Filter("product_id", Operator.Equals, p.Id.ToString())
+                .Order(x => x.OrderIndex, Ordering.Ascending)
+                .Get();
+
+            variants.AddRange(result.Models);
+        }
 
         // 4. 一覧用 ViewModel に変換
         VariantItems =
