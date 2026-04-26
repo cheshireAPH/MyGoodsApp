@@ -346,6 +346,29 @@
                 </div>
                 <div style="flex:1;">
                     @item.VariantName
+
+                    @{
+                        string lineStyle;
+
+                        if (item.CharacterColors.Count == 1)
+                        {
+                            // 1人 → 単色ライン
+                            lineStyle = $"background:{item.CharacterColors[0]};";
+                        }
+                        else if (item.CharacterColors.Count > 1)
+                        {
+                            // 複数人 → グラデーション
+                            var colors = string.Join(",", item.CharacterColors);
+                            lineStyle = $"background: linear-gradient(to right, {colors});";
+                        }
+                        else
+                        {
+                            // キャラなし → ライン非表示
+                            lineStyle = "background:transparent;";
+                        }
+                    }
+
+                    <div style="margin-top:4px; height:4px; border-radius:2px; @lineStyle"></div>
                 </div>
             </div>
 
@@ -643,6 +666,28 @@
             variants.AddRange(result.Models);
         }
 
+        // 4.1 キャラ紐付け
+        var variantIds = variants.Select(v => v.Id.ToString()).ToList();
+
+        var pvChars = new List<ProductVariantCharacter>();
+        foreach (var batch in Batch(variantIds, 10))
+        {
+            var result = await Supabase.Client
+                .From<ProductVariantCharacter>()
+                .Filter("product_variant_id", Operator.In, batch.ToArray())
+                .Get();
+
+            pvChars.AddRange(result.Models);
+        }
+
+        // 4.2 キャラ一覧
+        var charactersResult = await Supabase.Client
+            .From<Character>()
+            .Select("*")
+            .Get();
+
+        var characters = charactersResult.Models.ToDictionary(c => c.Id);
+
         // ------------------------------
         // 4. ViewModel 変換
         // ------------------------------
@@ -666,6 +711,10 @@
                      ? p.Title
                      : $"{p.Title} - {v.Name}",
                  ImageUrl = v.ImageUrl,
+                 CharacterColors = pvChars
+                    .Where(pc => pc.ProductVariantId == v.Id)
+                    .Select(pc => characters[pc.CharacterId].Color!)
+                    .ToList(),
                  OrderIndex = v.OrderIndex,
                  SourceOrderIndex = s?.OrderIndex ?? 0,
                  Owned = v.Owned,
@@ -733,6 +782,8 @@
         public int Owned { get; set; }
         public int Floating { get; set; }
         public int Wanted { get; set; }
+
+        public List<string> CharacterColors { get; set; } = new();
 
         //個数編集用
         public Guid VariantId { get; set; }
