@@ -586,9 +586,8 @@
         AllSeries = seriesResult.Models;
     }
 
-    // ------------------------------
-    // 排出品中心の一覧データ取得
-    // ------------------------------
+    /// <summary>一覧データ取得</summary>
+    /// <returns></returns>
     private async Task LoadVariantList()
     {
         // 1. 親商品
@@ -609,63 +608,71 @@
             return;
         }
 
-        // 2. 子商品（VariantSource）
+        var productIds = products.Select(p => p.Id.ToString()).ToList();
+
+        // ------------------------------
+        // 2. 子商品（VariantSource）を IN バッチで取得
+        // ------------------------------
         var sources = new List<VariantSource>();
 
-        foreach (var p in products)
+        foreach (var batch in Batch(productIds, 10)) // ← 10 件ずつ
         {
             var result = await Supabase.Client
                 .From<VariantSource>()
-                .Filter("product_id", Operator.Equals, p.Id.ToString())
+                .Filter("product_id", Operator.In, batch.ToArray())
                 .Get();
 
             sources.AddRange(result.Models);
         }
 
-        // 3. 排出品（ProductVariant）
+        // ------------------------------
+        // 3. 排出品（ProductVariant）も IN バッチで取得
+        // ------------------------------
         var variants = new List<ProductVariant>();
 
-        foreach (var p in products)
+        foreach (var batch in Batch(productIds, 10))
         {
             var result = await Supabase.Client
                 .From<ProductVariant>()
-                .Filter("product_id", Operator.Equals, p.Id.ToString())
+                .Filter("product_id", Operator.In, batch.ToArray())
                 .Order(x => x.OrderIndex, Ordering.Ascending)
                 .Get();
 
             variants.AddRange(result.Models);
         }
 
-        // 4. 一覧用 ViewModel に変換
+        // ------------------------------
+        // 4. ViewModel 変換
+        // ------------------------------
         VariantItems =
             (from v in variants
              join s in sources on v.SourceId equals s.Id into vs
              from s in vs.DefaultIfEmpty()
              join p in products on v.ProductId equals p.Id
              select new VariantListItem
-                 {
-                     ProductId = p.Id,
-                     ProductTitle = p.Title,
-                     Category = p.Category,
-                     ReleaseDate = p.ReleaseDate,
-                     ReleaseDateText = p.ReleaseDateText,
-                     Price = p.Price,
-                     VariantId = v.Id,
-                     SourceId = v.SourceId,
-                     VariantName = v.Name,
-                     DisplayName = string.IsNullOrWhiteSpace(v.Name)
-                         ? p.Title
-                         : $"{p.Title} - {v.Name}",
-                     ImageUrl = v.ImageUrl,
-                     OrderIndex = v.OrderIndex,
-                     SourceOrderIndex = s?.OrderIndex ?? 0,
-                     Owned = v.Owned,
-                     Floating = v.Floating,
-                     Wanted = v.Wanted
-                 })
+             {
+                 ProductId = p.Id,
+                 ProductTitle = p.Title,
+                 Category = p.Category,
+                 ReleaseDate = p.ReleaseDate,
+                 ReleaseDateText = p.ReleaseDateText,
+                 Price = p.Price,
+                 VariantId = v.Id,
+                 SourceId = v.SourceId,
+                 VariantName = v.Name,
+                 DisplayName = string.IsNullOrWhiteSpace(v.Name)
+                     ? p.Title
+                     : $"{p.Title} - {v.Name}",
+                 ImageUrl = v.ImageUrl,
+                 OrderIndex = v.OrderIndex,
+                 SourceOrderIndex = s?.OrderIndex ?? 0,
+                 Owned = v.Owned,
+                 Floating = v.Floating,
+                 Wanted = v.Wanted
+             })
             .OrderBy(x => x.Category)
-            .ThenBy(x => x.ReleaseDate.HasValue ? 0 : 1)   // 日付あり → 先
-            .ThenBy(x => x.ReleaseDate)                    // 日付昇順
+            .ThenBy(x => x.ReleaseDate.HasValue ? 0 : 1)
+            .ThenBy(x => x.ReleaseDate)
             .ThenBy(x => x.ProductTitle)
             .ThenBy(x => x.SourceOrderIndex)
             .ThenBy(x => x.OrderIndex)
@@ -673,6 +680,28 @@
 
         GroupExpanded.Clear();
     }
+
+    /// <summary>バッチ分割ヘルパー</summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="source"></param>
+    /// <param name="size"></param>
+    /// <returns></returns>
+    private static IEnumerable<List<T>> Batch<T>(IEnumerable<T> source, int size)
+    {
+        var batch = new List<T>(size);
+        foreach (var item in source)
+        {
+            batch.Add(item);
+            if (batch.Count == size)
+            {
+                yield return batch;
+                batch = new List<T>(size);
+            }
+        }
+        if (batch.Count > 0)
+            yield return batch;
+    }
+
 
     private async Task OnSeriesChanged(int? value)
     {
