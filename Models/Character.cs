@@ -16,6 +16,9 @@ public class Character : BaseModel
     [Column("color")]
     public string? Color { get; set; }
 
+    [Column("order_index")]
+    public int OrderIndex { get; set; }
+
     [Column("series_id")]
     public int SeriesId { get; set; }
 }

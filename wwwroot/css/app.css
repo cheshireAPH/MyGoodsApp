@@ -125,15 +125,43 @@ a, .btn-link {
 /* ===================================
    6. 並び替え UI
 =================================== */
-.drag-handle {
-    cursor: grab;
-    font-size: 20px;
-    color: #666;
-}
-
 .sortable-ghost {
     opacity: 0.4;
 }
+
+.sortable-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    transition: background 0.2s ease;
+}
+
+    .sortable-item:hover {
+        background: #f8f8f8;
+    }
+
+.drag-handle {
+    margin-right: 10px;
+    font-size: 18px;
+    opacity: 0.6;
+    cursor: grab;
+}
+
+    .drag-handle:active {
+        cursor: grabbing;
+        opacity: 1;
+    }
+
+.sortable-item span {
+    flex-grow: 1;
+    margin-right: 10px;
+}
+
 
 /* ===================================
    7. 画像セル（PC → 縦 / スマホ → 横）

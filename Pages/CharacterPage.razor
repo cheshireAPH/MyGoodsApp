@@ -2,6 +2,7 @@
 @inject SupabaseClientService Supabase
 @inject IDialogService Dialog
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <MudPaper Class="pa-4 mx-auto" MaxWidth="600px" Elevation="4">
 
@@ -13,29 +14,27 @@
         ＋ 新規キャラ追加
     </MudButton>
 
-    <MudTable T="Character" Items="characterList" Class="mt-4">
-        <HeaderContent>
-            <MudTh>キャラ名</MudTh>
-            <MudTh>操作</MudTh>
-        </HeaderContent>
+    <div @ref="listRef">
+        @foreach (var c in characterList)
+        {
+            <div class="sortable-item">
+                <span class="drag-handle" style="cursor:grab;">☰</span>
+                <span>@c.Name</span>
 
-        <RowTemplate Context="item">
-            <MudTd>@item.Name</MudTd>
-            <MudTd>
                 <MudButton Variant="Variant.Text"
-                           Color="MudBlazor.Color.Primary"
-                           OnClick="@(() => EditCharacterDialog(item))">
+                           Color="Color.Primary"
+                           OnClick="@(() => EditCharacterDialog(c))">
                     編集
                 </MudButton>
 
                 <MudButton Variant="Variant.Text"
-                           Color="MudBlazor.Color.Error"
-                           OnClick="@(() => DeleteCharacter(item))">
+                           Color="Color.Error"
+                           OnClick="@(() => DeleteCharacter(c))">
                     削除
                 </MudButton>
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
+            </div>
+        }
+    </div>
 
     <MudButton Variant="Variant.Text"
                Color="MudBlazor.Color.Secondary"
@@ -51,6 +50,15 @@
 
     List<Character> characterList = new();
 
+    ElementReference listRef;
+    DotNetObjectReference<CharacterPage>? dotnetRef;
+
+    public class SortEvent
+    {
+        public int oldIndex { get; set; }
+        public int newIndex { get; set; }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await LoadCharacters();
@@ -62,7 +70,7 @@
             .From<Character>()
             .Select("*")
             .Filter("series_id", Operator.Equals, SeriesId)
-            .Order("name", Ordering.Ascending)
+            .Order("order_index", Ordering.Ascending)
             .Get();
 
         characterList = result.Models;
@@ -116,5 +124,32 @@
             await Supabase.Client.From<Character>().Delete(c);
             await LoadCharacters();
         }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dotnetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("initSortable", listRef, dotnetRef);
+        }
+    }
+
+    /// <summary>並べ替え</summary>
+    [JSInvokable]
+    public async Task OnSortChanged(SortEvent evt)
+    {
+        var item = characterList[evt.oldIndex];
+        characterList.RemoveAt(evt.oldIndex);
+        characterList.Insert(evt.newIndex, item);
+
+        // order_index 保存
+        for (int i = 0; i < characterList.Count; i++)
+        {
+            characterList[i].OrderIndex = i;
+            await Supabase.Client.From<Character>().Upsert(characterList[i]);
+        }
+
+        StateHasChanged();
     }
 }
