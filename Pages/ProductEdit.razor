@@ -763,19 +763,55 @@
             await Supabase.Client.From<Product>().Update(product);
         }
 
-        // 子商品削除判定
+        // ------------------------------
+        // ★ DB の VariantSource を取得
+        // ------------------------------
         var existingSources = await Supabase.Client
             .From<VariantSource>()
             .Where(x => x.ProductId == product.Id)
             .Get();
 
         var existingSourceIds = existingSources.Models.Select(x => x.Id).ToHashSet();
+
+        // 今画面に残っている SourceId
         var currentSourceIds = sources
             .Where(s => s.Source.Id != Guid.Empty)
             .Select(s => s.Source.Id)
             .ToHashSet();
 
-        foreach (var delId in existingSourceIds.Except(currentSourceIds))
+        // 削除対象の SourceId
+        var deletedSourceIds = existingSourceIds.Except(currentSourceIds).ToList();
+
+        // ------------------------------
+        // ★ VariantSource 削除前に ProductVariant を削除
+        // ------------------------------
+        var existingVariants = await Supabase.Client
+            .From<ProductVariant>()
+            .Select("*")
+            .Filter("product_id", Operator.Equals, product.Id.ToString())
+            .Get();
+
+        var existingVariantList = existingVariants.Models;
+
+        foreach (var delSourceId in deletedSourceIds)
+        {
+            var variantsToDelete = existingVariantList
+                .Where(v => v.SourceId == delSourceId)
+                .ToList();
+
+            foreach (var v in variantsToDelete)
+            {
+                await Supabase.Client
+                    .From<ProductVariant>()
+                    .Where(x => x.Id == v.Id)
+                    .Delete();
+            }
+        }
+
+        // ------------------------------
+        // ★ 次に VariantSource を削除
+        // ------------------------------
+        foreach (var delId in deletedSourceIds)
         {
             await Supabase.Client
                 .From<VariantSource>()
@@ -783,7 +819,9 @@
                 .Delete();
         }
 
-        // 子商品 Insert/Update
+        // ------------------------------
+        // ★ 子商品 Insert/Update
+        // ------------------------------
         foreach (var vm in sources)
         {
             VariantSource savedSource;
@@ -801,30 +839,24 @@
                 savedSource = vm.Source;
             }
 
-            // まず全 Variant を Insert/Update する前に画像アップロードを済ませる
+            // 画像アップロード
             foreach (var v in vm.Variants)
             {
                 if (v.TempImageBytes != null)
                 {
                     var bucket = Supabase.Client.Storage.From("variants");
 
-                    // ★ 既存の ImageUrl からファイル名を抽出
                     var fileName = GetFileName(v);
 
-                    // ★ Remove はファイル名だけ
                     await bucket.Remove(fileName);
-
-                    // ★ Upload もファイル名だけ
                     await bucket.Upload(v.TempImageBytes, fileName);
 
-                    // ★ 公開URL
                     v.ImageUrl = bucket.GetPublicUrl(fileName);
-
                     v.TempImageBytes = null;
                 }
             }
 
-            // Insert/Update（画像URLも含めて1回で保存）
+            // Variant Insert/Update
             foreach (var v in vm.Variants)
             {
                 ProductVariant savedVariant;
@@ -884,13 +916,15 @@
                 }
             }
 
-            // Insert/Update が全て終わった後に削除判定
-            var existingVariants = await Supabase.Client
+            // ------------------------------
+            // ★ Variant 削除判定（この Source のみ）
+            // ------------------------------
+            var existingVariantsForSource = await Supabase.Client
                 .From<ProductVariant>()
                 .Where(x => x.SourceId == savedSource.Id)
                 .Get();
 
-            var existingVariantIds = existingVariants.Models.Select(x => x.Id).ToHashSet();
+            var existingVariantIds = existingVariantsForSource.Models.Select(x => x.Id).ToHashSet();
             var currentVariantIds = vm.Variants
                 .Where(v => v.Id.HasValue)
                 .Select(v => v.Id!.Value)
