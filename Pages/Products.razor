@@ -713,6 +713,7 @@
                  ImageUrl = v.ImageUrl,
                  CharacterColors = pvChars
                     .Where(pc => pc.ProductVariantId == v.Id)
+                    .OrderBy(pc => characters[pc.CharacterId].OrderIndex)
                     .Select(pc => characters[pc.CharacterId].Color!)
                     .ToList(),
                  OrderIndex = v.OrderIndex,

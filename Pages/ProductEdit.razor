@@ -315,7 +315,7 @@
                     .From<Character>()
                     .Select("*")
                     .Filter(x => x.SeriesId, Operator.Equals, SelectedSeries.Id)
-                    .Order(x => x.Name, Ordering.Ascending)
+                    .Order(x => x.OrderIndex, Ordering.Ascending)
                     .Get();
 
                 CharacterCandidates = result.Models;
@@ -730,7 +730,7 @@
             .From<Character>()
             .Select("*")
             .Filter(x => x.SeriesId, Operator.Equals, SelectedSeries.Id)
-            .Order(x => x.Name, Ordering.Ascending)
+            .Order(x => x.OrderIndex, Ordering.Ascending)
             .Get();
 
         CharacterCandidates = result.Models;
