@@ -188,7 +188,9 @@
                     </MudLink>
 
                     <span style="font-size:0.8em; color:gray; margin-top:2px;">
-                        @(item.ReleaseDate?.ToString("yyyy/MM/dd") ?? item.ReleaseDateText ?? "")
+                        @(item.ReleaseDateText 
+                            ?? item.ReleaseDate?.ToString("yyyy/MM/dd") 
+                            ?? "")
                     </span>
                 </div>
 
