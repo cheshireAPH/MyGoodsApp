@@ -40,6 +40,12 @@
                 </MudButton>
 
                 <MudButton Variant="Variant.Text"
+                           Color="MudBlazor.Color.Info"
+                           OnClick="@(() => DuplicateTemplate(context.Id))">
+                    複製
+                </MudButton>
+
+                <MudButton Variant="Variant.Text"
                            Color="MudBlazor.Color.Error"
                            OnClick="@(() => DeleteTemplate(context.Id))">
                     削除
@@ -99,5 +105,11 @@
     {
         Nav.NavigateTo($"products/new/{id}");
     }
+
+    void DuplicateTemplate(Guid id)
+    {
+        Nav.NavigateTo($"templates/new/{id}");
+    }
+
 
 }
