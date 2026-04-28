@@ -7,9 +7,9 @@ public class CuteTheme : MudTheme
         // 🌸 ライトモード（かわいい薄紫）
         PaletteLight = new PaletteLight()
         {
-            Primary = "#ff8fb1",
-            Secondary = "#ffc6d9",
-            Tertiary = "#e8b5ce",
+            Primary = "#c084f5",     // かわいい紫
+            Secondary = "#e3b8ff",   // 薄紫
+            Tertiary = "#f3d9ff",    // もっと淡い紫
 
             Background = "#fff7fb",
             Surface = "#ffffff",
@@ -30,9 +30,9 @@ public class CuteTheme : MudTheme
         // 🌙 ダークモード（黒すぎず、紫寄りでかわいい）
         PaletteDark = new PaletteDark()
         {
-            Primary = "#ff8fb1",
-            Secondary = "#ffc6d9",
-            Tertiary = "#e8b5ce",
+            Primary = "#c084f5",     // かわいい紫
+            Secondary = "#e3b8ff",   // 薄紫
+            Tertiary = "#f3d9ff",    // もっと淡い紫
 
             Background = "#1e1a22",
             Surface = "#2a2430",
@@ -43,11 +43,8 @@ public class CuteTheme : MudTheme
             DrawerBackground = "#2a2430",
             DrawerText = "#ffffff",
 
-            TextPrimary = "#ffffff",
-            TextSecondary = "#e0d0e8",
-
-            TableLines = "#3a3340",
-            Divider = "#3a3340"
+            TextPrimary = "#f0e6f5",      // ← 白より少し暗い紫がかった白
+            TextSecondary = "#d8c8e0",    // ← これも少し暗めに
         };
 
         LayoutProperties = new LayoutProperties()

@@ -10,13 +10,13 @@ h1:focus {
 }
 
 a, .btn-link {
-    color: #0071c1;
+    color: var(--mud-palette-primary);
 }
 
 .btn-primary {
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    background-color: var(--mud-palette-primary);
+    border-color: var(--mud-palette-primary);
 }
 
 .btn:focus,
@@ -24,7 +24,7 @@ a, .btn-link {
 .btn-link.nav-link:focus,
 .form-control:focus,
 .form-check-input:focus {
-    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem var(--mud-palette-primary);
 }
 
 .content {
@@ -35,22 +35,22 @@ a, .btn-link {
    2. バリデーション
 =================================== */
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+    outline: 1px solid var(--mud-palette-success);
 }
 
 .invalid {
-    outline: 1px solid red;
+    outline: 1px solid var(--mud-palette-error);
 }
 
 .validation-message {
-    color: red;
+    color: var(--mud-palette-error);
 }
 
 /* ===================================
    3. Blazor エラー UI
 =================================== */
 #blazor-error-ui {
-    background: lightyellow;
+    background: var(--mud-palette-warning);
     bottom: 0;
     display: none;
     left: 0;
@@ -103,7 +103,7 @@ a, .btn-link {
    5. Drawer / ナビゲーション
 =================================== */
 .drawer-style {
-    background: #fff7fb;
+    background: var(--mud-palette-surface);
 }
 
 .mud-nav-link {
@@ -114,11 +114,11 @@ a, .btn-link {
 }
 
     .mud-nav-link:hover {
-        background-color: #ffe3f0 !important;
+        background: var(--mud-palette-hover)        !important;
     }
 
     .mud-nav-link.active {
-        background-color: #ffb6d9 !important;
+        background: var(--mud-palette-hover)        !important;
         color: #fff !important;
     }
 
@@ -135,14 +135,14 @@ a, .btn-link {
     justify-content: space-between;
     padding: 8px 12px;
     margin-bottom: 6px;
-    background: #fff;
+    background: var(--mud-palette-surface);
     border-radius: 8px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--mud-palette-primary);
     transition: background 0.2s ease;
 }
 
     .sortable-item:hover {
-        background: #f8f8f8;
+        background: var(--mud-palette-hover);
     }
 
 .drag-handle {
@@ -223,7 +223,7 @@ a, .btn-link {
 .cropper-top-bar,
 .cropper-bottom-bar {
     width: 100%;
-    background: white;
+    background: var(--mud-palette-surface);
     padding: 8px 16px;
     z-index: 1;
 }
@@ -332,8 +332,8 @@ a, .btn-link {
    11. 一括編集パネル
 =================================== */
 .editing-panel {
-    background: #fff7e6 !important;
-    border-left: 4px solid #ffa726 !important;
+    background: var(--mud-palette-surface) !important;
+    border-left: 4px solid var(--mud-palette-primary) !important;
 }
 
 /* ===================================
@@ -381,7 +381,7 @@ a, .btn-link {
     height: 128px;
     position: relative;
     border-radius: 8px;
-    background: #fff;
+    background: var(--mud-palette-surface);
     overflow: hidden;
     border: 2px solid transparent;
 }
@@ -396,7 +396,7 @@ a, .btn-link {
         position: absolute;
         top: 4px;
         right: 4px;
-        background: #ff4081;
+        background: var(--mud-palette-primary);
         color: white;
         border-radius: 50%;
         width: 28px;
@@ -440,7 +440,7 @@ a, .btn-link {
 ================================ */
 .grid-item {
     position: relative;
-    background: white;
+    background: var(--mud-palette-surface);
     border-radius: 6px;
     padding: 4px;
     min-height: 110px;
@@ -474,7 +474,7 @@ a, .btn-link {
     font-size: 0.9rem;
     text-align: center;
     padding: 4px;
-    color: #555;
+    color: var(--mud-palette-text-primary);
     word-break: break-word;
 }
 
@@ -485,7 +485,7 @@ a, .btn-link {
     position: absolute;
     top: 4px;
     right: 4px;
-    background: #1976d2;
+    background: var(--mud-palette-primary);
     color: white;
     border-radius: 50%;
     width: 26px;
@@ -520,6 +520,6 @@ a, .btn-link {
    選択中のマス（クリックで選択）
 ================================ */
 .grid-item.selected {
-    outline: 3px solid #42a5f5;
+    outline: 3px solid var(--mud-palette-primary);
     outline-offset: -3px;
 }
