@@ -46,7 +46,7 @@
     /// <summary>画像生成モードフラグ</summary>
     bool IsImageMode = false;
 
-    List<VariantListItem>? VariantItems;
+    List<VariantListItem> VariantItems = new();
 
     #endregion
 
@@ -635,40 +635,33 @@
 
         var productIds = products.Select(p => p.Id).ToList();
 
-        // ------------------------------
-        // 2. 子商品（VariantSource）を IN バッチで取得
-        // ------------------------------
+        // 2. VariantSource（1クエリ）
         var sources = (await Supabase.Client
             .From<VariantSource>()
             .Filter("product_id", Operator.In, productIds.ToArray())
             .Get()).Models;
 
-        // ------------------------------
-        // 3. 排出品（ProductVariant）も IN バッチで取得
-        // ------------------------------
-        var variants = new List<ProductVariant>();
-
-        foreach (var batch in Batch(productIds, 20))
+        // 3. RPC で variants + characters を一括取得（1クエリ）
+        var rpcResult = await Supabase.Client.Rpc("get_variants_full", new Dictionary<string, object>
         {
-            var result = await Supabase.Client
-                .From<ProductVariant>()
-                .Select("*, product_variant_characters(*), variant_sources(*)")
-                .Filter("product_id", Operator.In, batch.ToArray())
-                .Order(x => x.OrderIndex, Ordering.Ascending)
-                .Get();
+            { "product_ids", productIds }
+        });
 
-            variants.AddRange(result.Models);
+        var json = rpcResult.Content;
+
+        var variantFullList = JsonSerializer.Deserialize<List<VariantFullDto>>(json);
+
+        if (variantFullList == null)
+        {
+            Console.WriteLine("RPC parse failed: " + json);
+            VariantItems = new();
+            return;
         }
 
-        // 4.1 キャラ紐付け
-        var variantIds = variants.Select(v => v.Id).ToList();
+        Console.WriteLine("Count = " + variantFullList.Count);
+        Console.WriteLine("First = " + JsonSerializer.Serialize(variantFullList[0]));
 
-        var pvChars = (await Supabase.Client
-            .From<ProductVariantCharacter>()
-            .Filter("product_variant_id", Operator.In, variantIds.ToArray())
-            .Get()).Models;
-
-        // 4.2 キャラ一覧
+        // 4. Character 一覧（1クエリ）
         var charactersResult = await Supabase.Client
             .From<Character>()
             .Select("*")
@@ -676,14 +669,34 @@
 
         var characters = charactersResult.Models.ToDictionary(c => c.Id);
 
-        // ------------------------------
-        // 4. ViewModel 変換
-        // ------------------------------
+        if (charactersResult.Models == null)
+        {
+            Console.WriteLine("charactersResult.Models is NULL");
+        }
+        else
+        {
+            Console.WriteLine($"characters count = {charactersResult.Models.Count}");
+        }
+
+
+        // 5. ViewModel 変換
+        foreach (var vf in variantFullList)
+        {
+            foreach (var pc in vf.characters)
+            {
+                if (!characters.ContainsKey(pc.character_id))
+                {
+                    Console.WriteLine($"CharacterId {pc.character_id} not found in characters table");
+                }
+            }
+        }
+
         VariantItems =
-            (from v in variants
-             join s in sources on v.SourceId equals s.Id into vs
+            (from vf in variantFullList
+             let v = vf.variant
+             join s in sources on v.source_id equals s.Id into vs
              from s in vs.DefaultIfEmpty()
-             join p in products on v.ProductId equals p.Id
+             join p in products on v.product_id equals p.Id
              select new VariantListItem
              {
                  ProductId = p.Id,
@@ -692,23 +705,26 @@
                  ReleaseDate = p.ReleaseDate,
                  ReleaseDateText = p.ReleaseDateText,
                  Price = p.Price,
-                 VariantId = v.Id,
-                 SourceId = v.SourceId,
-                 VariantName = v.Name,
-                 DisplayName = string.IsNullOrWhiteSpace(v.Name)
+
+                 VariantId = v.id,
+                 SourceId = v.source_id,
+                 VariantName = v.name,
+                 DisplayName = string.IsNullOrWhiteSpace(v.name)
                      ? p.Title
-                     : $"{p.Title} - {v.Name}",
-                 ImageUrl = v.ImageUrl,
-                 CharacterColors = pvChars
-                    .Where(pc => pc.ProductVariantId == v.Id)
-                    .OrderBy(pc => characters[pc.CharacterId].OrderIndex)
-                    .Select(pc => characters[pc.CharacterId].Color!)
+                     : $"{p.Title} - {v.name}",
+                 ImageUrl = v.image_url,
+
+                 CharacterColors = vf.characters
+                    .Where(pc => characters.ContainsKey(pc.character_id))   // ← 安全化
+                    .OrderBy(pc => characters[pc.character_id].OrderIndex)
+                    .Select(pc => characters[pc.character_id].Color!)
                     .ToList(),
-                 OrderIndex = v.OrderIndex,
+
+                 OrderIndex = v.order_index,
                  SourceOrderIndex = s?.OrderIndex ?? 0,
-                 Owned = v.Owned,
-                 Floating = v.Floating,
-                 Wanted = v.Wanted
+                 Owned = v.owned,
+                 Floating = v.floating,
+                 Wanted = v.wanted
              })
             .OrderBy(x => x.Category)
             .ThenBy(x => x.ReleaseDate.HasValue ? 0 : 1)
@@ -802,6 +818,31 @@
     {
         public string Label { get; set; } = "";
         public List<VariantListItem> Items { get; set; } = new();
+    }
+
+    public class VariantFullDto
+    {
+        public VariantDto variant { get; set; }
+        public List<VariantCharacterDto> characters { get; set; }
+    }
+
+    public class VariantCharacterDto
+    {
+        public Guid product_variant_id { get; set; }
+        public int character_id { get; set; }
+    }
+
+    public class VariantDto
+    {
+        public Guid id { get; set; }
+        public Guid product_id { get; set; }
+        public Guid source_id { get; set; }
+        public string name { get; set; }
+        public string image_url { get; set; }
+        public int order_index { get; set; }
+        public int owned { get; set; }
+        public int floating { get; set; }
+        public int wanted { get; set; }
     }
 
     #endregion
