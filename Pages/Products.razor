@@ -633,32 +633,26 @@
             return;
         }
 
-        var productIds = products.Select(p => p.Id.ToString()).ToList();
+        var productIds = products.Select(p => p.Id).ToList();
 
         // ------------------------------
         // 2. 子商品（VariantSource）を IN バッチで取得
         // ------------------------------
-        var sources = new List<VariantSource>();
-
-        foreach (var batch in Batch(productIds, 10)) // ← 10 件ずつ
-        {
-            var result = await Supabase.Client
-                .From<VariantSource>()
-                .Filter("product_id", Operator.In, batch.ToArray())
-                .Get();
-
-            sources.AddRange(result.Models);
-        }
+        var sources = (await Supabase.Client
+            .From<VariantSource>()
+            .Filter("product_id", Operator.In, productIds.ToArray())
+            .Get()).Models;
 
         // ------------------------------
         // 3. 排出品（ProductVariant）も IN バッチで取得
         // ------------------------------
         var variants = new List<ProductVariant>();
 
-        foreach (var batch in Batch(productIds, 10))
+        foreach (var batch in Batch(productIds, 20))
         {
             var result = await Supabase.Client
                 .From<ProductVariant>()
+                .Select("*, product_variant_characters(*), variant_sources(*)")
                 .Filter("product_id", Operator.In, batch.ToArray())
                 .Order(x => x.OrderIndex, Ordering.Ascending)
                 .Get();
@@ -667,18 +661,12 @@
         }
 
         // 4.1 キャラ紐付け
-        var variantIds = variants.Select(v => v.Id.ToString()).ToList();
+        var variantIds = variants.Select(v => v.Id).ToList();
 
-        var pvChars = new List<ProductVariantCharacter>();
-        foreach (var batch in Batch(variantIds, 10))
-        {
-            var result = await Supabase.Client
-                .From<ProductVariantCharacter>()
-                .Filter("product_variant_id", Operator.In, batch.ToArray())
-                .Get();
-
-            pvChars.AddRange(result.Models);
-        }
+        var pvChars = (await Supabase.Client
+            .From<ProductVariantCharacter>()
+            .Filter("product_variant_id", Operator.In, variantIds.ToArray())
+            .Get()).Models;
 
         // 4.2 キャラ一覧
         var charactersResult = await Supabase.Client
