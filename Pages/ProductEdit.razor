@@ -265,6 +265,24 @@
     private bool IsEditMode => Id.HasValue;
     private bool IsTemplateMode => Nav.Uri.Contains("templates/");
 
+    public class SourceFullDto
+    {
+        public VariantSource Source { get; set; }
+        public List<VariantWithCharactersDto> Variants { get; set; }
+    }
+
+    public class VariantWithCharactersDto
+    {
+        public ProductVariant Variant { get; set; }
+        public List<VariantCharacterDto> Characters { get; set; }
+    }
+
+    public class VariantCharacterDto
+    {
+        public Guid ProductVariantId { get; set; }
+        public int CharacterId { get; set; }
+    }
+
     public class EditedImageDto
     {
         public string variantId { get; set; }
@@ -362,7 +380,6 @@
                     {
                         v.Id = null;          // 新規 Insert 扱い
                         v.Owned = 0;          // 所持数は 0 に初期化
-                        // Wanted はテンプレの値を残す（紗香さんの希望）
                     }
                 }
             }
@@ -397,59 +414,52 @@
 
     }
 
-    /* ------------------------------
-    子商品・封入品読み込み
-       ------------------------------ */
+    /// <summary>子商品・封入品読み込み</summary>
+    /// <param name="productId"></param>
+    /// <returns></returns>
     private async Task<List<VariantSourceViewModel>> LoadSources(Guid productId)
     {
-        var sourcesResult = await Supabase.Client
-            .From<VariantSource>()
-            .Where(x => x.ProductId == productId)
-            .Order(x => x.OrderIndex, Ordering.Ascending)
-            .Get();
-
-        var vmList = new List<VariantSourceViewModel>();
-
-        foreach (var s in sourcesResult.Models)
+        var rpc = await Supabase.Client.Rpc("get_sources_full", new Dictionary<string, object>
         {
-            var vm = new VariantSourceViewModel { Source = s };
+            { "p_product_id", productId }
+        });
 
-            var variantsResult = await Supabase.Client
-                .From<ProductVariant>()
-                .Where(x => x.SourceId == s.Id)
-                .Order(x => x.OrderIndex, Ordering.Ascending)
-                .Get();
+        Console.WriteLine("RPC RAW JSON = " + rpc.Content);
 
-            foreach (var v in variantsResult.Models)
+        var dtoList = JsonSerializer.Deserialize<List<SourceFullDto>>(rpc.Content)
+                      ?? new List<SourceFullDto>();
+
+        var result = new List<VariantSourceViewModel>();
+
+        foreach (var dto in dtoList)
+        {
+            var vm = new VariantSourceViewModel { Source = dto.Source };
+
+            foreach (var vdto in dto.Variants)
             {
+                var v = vdto.Variant;
+
                 var vvm = new ProductVariantViewModel
                 {
                     Id = v.Id,
-                    Name = v.Name,
+                    Name = v.Name ?? "",
                     OrderIndex = v.OrderIndex,
                     ImageUrl = v.ImageUrl,
                     Owned = v.Owned,
-                    Wanted = v.Wanted,
                     Floating = v.Floating,
-                    CharacterIds = new HashSet<int>()
+                    Wanted = v.Wanted,
+                    CharacterIds = vdto.Characters
+                        .Select(c => c.CharacterId)
+                        .ToHashSet()
                 };
-
-                var charsResult = await Supabase.Client
-                    .From<ProductVariantCharacter>()
-                    .Where(x => x.ProductVariantId == v.Id)
-                    .Get();
-
-                vvm.CharacterIds = charsResult.Models
-                    .Select(x => x.CharacterId)
-                    .ToHashSet();
 
                 vm.Variants.Add(vvm);
             }
 
-            vmList.Add(vm);
+            result.Add(vm);
         }
 
-        return vmList;
+        return result;
     }
 
     /* ------------------------------
