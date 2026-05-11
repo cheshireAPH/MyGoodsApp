@@ -28,7 +28,7 @@ public class ProductVariant : BaseModel
     [Column("owned")]
     public int Owned { get; set; } = 0;
 
-    [Column("Floating")]
+    [Column("floating")]
     public int Floating { get; set; }
 
     [Column("wanted")]
