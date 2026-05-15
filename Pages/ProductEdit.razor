@@ -692,74 +692,29 @@
     /// <summary>URLから画像取得</summary>
     /// <param name="s"></param>
     /// <returns></returns>
-    async Task FetchImageFromUrl(VariantSourceViewModel s)
+async Task FetchImageFromUrl(VariantSourceViewModel s)
+{
+    var url = s.Source.Url;
+    if (string.IsNullOrWhiteSpace(url))
+        return;
+
+    var response = await Http.PostAsJsonAsync(
+        "https://mygoodsapi.onrender.com/api/ImageProxy",
+        new { Url = url }
+    );
+
+    if (!response.IsSuccessStatusCode)
+        return;
+
+    var bytes = await response.Content.ReadAsByteArrayAsync();
+
+    foreach (var variant in s.Variants)
     {
-        var url = s.Source.Url;
-        if (string.IsNullOrWhiteSpace(url))
-            return;
-
-        // ★ 画像URLならそのまま使う
-        if (IsDirectImageUrl(url))
-        {
-            await FetchDirectImage(url, s);
-            return;
-        }
-
-        // 商品ページURL→API に丸投げ
-        var response = await Http.PostAsJsonAsync(
-            "https://mygoodsapi.onrender.com/api/ImageProxy",
-            new { Url = url }
-        );
-
-        if (!response.IsSuccessStatusCode)
-        {
-            Console.WriteLine($"API error: {response.StatusCode}");
-            return;
-        }
-
-        var bytes = await response.Content.ReadAsByteArrayAsync();
-
-        foreach (var variant in s.Variants)
-        {
-            variant.TempImageBytes = bytes;
-            variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
-        }
+        variant.TempImageBytes = bytes;
+        variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
     }
+}
 
-    /// <summary>画像URL判定</summary>
-    /// <param name="url"></param>
-    /// <returns></returns>
-    bool IsDirectImageUrl(string url)
-    {
-        if (string.IsNullOrWhiteSpace(url)) return false;
-
-        var lower = url.ToLower();
-        return lower.EndsWith(".jpg") ||
-               lower.EndsWith(".jpeg") ||
-               lower.EndsWith(".png") ||
-               lower.EndsWith(".webp") ||
-               lower.EndsWith(".gif") ||
-               lower.Contains(".jpg?") ||
-               lower.Contains(".png?");
-    }
-
-    async Task FetchDirectImage(string imageUrl, VariantSourceViewModel s)
-    {
-        try
-        {
-            var bytes = await Http.GetByteArrayAsync(imageUrl);
-
-            foreach (var variant in s.Variants)
-            {
-                variant.TempImageBytes = bytes;
-                variant.ImageUrl = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Direct image fetch failed: {ex.Message}");
-        }
-    }
 
     void GoBack()
     {
