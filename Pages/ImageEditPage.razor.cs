@@ -7,6 +7,7 @@ using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace MyGoodsApp.Pages
@@ -17,10 +18,7 @@ namespace MyGoodsApp.Pages
 
         [Inject] public IJSRuntime JS { get; set; } = default!;
         [Inject] public HttpClient Http { get; set; } = default!;
-        [Inject] public SupabaseClientService Supabase { get; set; } = default!;
         [Inject] public LayoutStateService LayoutState { get; set; } = default!;
-
-        [Parameter] public Guid variantId { get; set; }
 
         public ProductVariantViewModel Variant { get; set; } = new();
 
@@ -99,6 +97,8 @@ namespace MyGoodsApp.Pages
             Variant.TempImageBytes = ms.ToArray();
         }
 
+        /// <summary>決定</summary>
+        /// <returns></returns>
         async Task ApplyCrop()
         {
             var frame = await JS.InvokeAsync<CropFrame>("cropper.getFrame");
@@ -113,13 +113,19 @@ namespace MyGoodsApp.Pages
 
             var base64 = Convert.ToBase64String(cropped);
 
-            // ★ PWA 判定
             var hasOpener = await JS.InvokeAsync<bool>("hasOpener");
 
             if (hasOpener)
             {
                 // ★ ブラウザ別タブ：postMessage + close
-                await JS.InvokeVoidAsync("postMessageToOpener", variantId.ToString(), base64);
+                await JS.InvokeVoidAsync("postMessageToOpener",
+                    JsonSerializer.Serialize(new
+                    {
+                        id = Variant.Id,
+                        base64 = base64
+                    })
+                );
+
                 await JS.InvokeVoidAsync("close");
             }
             else
@@ -128,7 +134,7 @@ namespace MyGoodsApp.Pages
                 await JS.InvokeVoidAsync("localStorage.setItem", "editedImage",
                     JsonSerializer.Serialize(new
                     {
-                        variantId = variantId.ToString(),
+                        id = Variant.Id.ToString(),
                         base64 = base64
                     })
                 );
@@ -238,15 +244,8 @@ namespace MyGoodsApp.Pages
 
         protected override async Task OnInitializedAsync()
         {
-            // ★ 1. DB から Variant を取得（まず基本情報だけ）
-            var v = await Supabase.Client
-                .From<ProductVariant>()
-                .Where(x => x.Id == variantId)
-                .Single();
-
-            Variant.Id = v.Id;
-            Variant.Name = v.Name;
-            Variant.ImageUrl = v.ImageUrl;
+            var json = await JS.InvokeAsync<string>("localStorage.getItem", "editingVariant");
+            Variant = JsonSerializer.Deserialize<ProductVariantViewModel>(json);
 
             // ★ 2. localStorage に編集済み画像があるか確認（PWA用）
             var editedJson = await JS.InvokeAsync<string>("localStorage.getItem", "editedImage");
@@ -255,7 +254,7 @@ namespace MyGoodsApp.Pages
             {
                 var obj = JsonSerializer.Deserialize<EditedImageDto>(editedJson);
 
-                if (obj != null && obj.variantId == variantId.ToString())
+                if (obj != null && obj.id == Variant.Id)
                 {
                     Variant.TempImageBytes = Convert.FromBase64String(obj.base64);
 
@@ -276,7 +275,13 @@ namespace MyGoodsApp.Pages
                     }
                     else
                     {
-                        Variant.TempImageBytes = await Http.GetByteArrayAsync(Variant.ImageUrl);
+                        var response = await Http.PostAsJsonAsync(
+                            "https://mygoodsapi.onrender.com/api/ImageProxy",
+                            new { Url = Variant.ImageUrl }
+                        );
+
+                        if (response.IsSuccessStatusCode)
+                            Variant.TempImageBytes = await response.Content.ReadAsByteArrayAsync();
                     }
                 }
                 else
@@ -299,7 +304,7 @@ namespace MyGoodsApp.Pages
 
         public class EditedImageDto
         {
-            public string variantId { get; set; }
+            public Guid id { get; set; }
             public string base64 { get; set; }
         }
 
