@@ -92,7 +92,10 @@
             @if (!IsTemplateMode)
             {
                 <div class="url-with-icon">
-                    <MudTextField @bind-Value="s.Source.Url" Label="URL" />
+                    <MudTextField @bind-Value="s.Source.Url"
+                                  Label="URL"
+                                  @ref="urlRef"
+                                  OnClick="@( () => JS.InvokeVoidAsync("selectAllInside", urlRef) )" />
 
                     <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
                                    Disabled="@string.IsNullOrWhiteSpace(s.Source.Url)"
@@ -253,6 +256,7 @@
     List<Series> AllSeries = new();
     List<Character> CharacterCandidates = new();
     string NewCharacterName = "";
+    private MudTextField<string> urlRef;
 
     #endregion
 

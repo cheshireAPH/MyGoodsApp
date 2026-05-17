@@ -44,3 +44,19 @@ window.registerPageShowHandler = function (dotnetRef) {
         dotnetRef.invokeMethodAsync("OnPageShow");
     });
 };
+
+window.selectAllInside = (rootComponent) => {
+    if (!rootComponent) return;
+
+    const root = rootComponent.element;
+    if (!root) return;
+
+    const input = root.querySelector("input");
+    if (!input) return;
+
+    // ★ クリック直後にブラウザがキャレットを置くので、
+    //    それより後に select() を実行する必要がある
+    setTimeout(() => {
+        input.select();
+    }, 0);
+};

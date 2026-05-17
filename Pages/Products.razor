@@ -92,13 +92,12 @@
             .Select(g => g.Key)
             .ToList();
 
-        <Virtualize TItem="string"
-                    Items="@groupKeys"
-                    Context="groupKey">
+        @foreach (var groupKey in groupKeys)
+        {
             <div @key="groupKey">
                 @RenderGroupBlock(groupKey, items, mode, color)
             </div>
-        </Virtualize>
+        }
     };
 
     /// <summary>タブ表示共通処理(グループ)</summary>
