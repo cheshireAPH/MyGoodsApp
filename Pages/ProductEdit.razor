@@ -569,7 +569,7 @@
             JsonSerializer.Serialize(variant));
 
         // ★ 編集画面を開く
-        await JS.InvokeVoidAsync("openUrl", $"/image-edit/{variant.Id}");
+        await JS.InvokeVoidAsync("openUrl", "image-edit");
     }
 
     [JSInvokable]

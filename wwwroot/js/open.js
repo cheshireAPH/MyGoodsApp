@@ -4,7 +4,7 @@
         || window.navigator.standalone === true;
 
     // 画像編集ページかどうか判定（URL 前提を壊さない）
-    const isImageEdit = url.startsWith("image-edit/");
+    const isImageEdit = url.startsWith("image-edit");
 
     if (isPwa && isImageEdit) {
         // PWA + 画像編集だけ → 同一タブ遷移
