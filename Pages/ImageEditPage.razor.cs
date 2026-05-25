@@ -266,22 +266,17 @@ namespace MyGoodsApp.Pages
             // ★ 3. TempImageBytes がまだ無い場合だけ ImageUrl を使う（fallback）
             if (Variant.TempImageBytes == null)
             {
-                if (!string.IsNullOrEmpty(Variant.ImageUrl))
+                if (!string.IsNullOrWhiteSpace(Variant.ImageUrl))
                 {
-                    if (Variant.ImageUrl.StartsWith("data:"))
+                    try
                     {
-                        var base64 = Variant.ImageUrl.Split(',')[1];
-                        Variant.TempImageBytes = Convert.FromBase64String(base64);
+                        // Supabase の URL は直接 GET でOK
+                        Variant.TempImageBytes = await Http.GetByteArrayAsync(Variant.ImageUrl);
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        var response = await Http.PostAsJsonAsync(
-                            "https://mygoodsapi.onrender.com/api/ImageProxy",
-                            new { Url = Variant.ImageUrl }
-                        );
-
-                        if (response.IsSuccessStatusCode)
-                            Variant.TempImageBytes = await response.Content.ReadAsByteArrayAsync();
+                        Console.WriteLine($"Image fetch failed: {ex.Message}");
+                        Variant.TempImageBytes = null;
                     }
                 }
                 else
