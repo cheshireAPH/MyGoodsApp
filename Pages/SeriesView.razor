@@ -29,6 +29,15 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // ★ デフォルトヘッダーに戻す
+        LayoutState.SetState(
+            title: "Collection",
+            onBack: default,
+            onSave: default,
+            leftMode: HeaderLeftMode.Menu,
+            showSave: false
+        );
+
         var result = await Supabase.Client
             .From<Models.Series>()
             .Order(x => x.Name, Ordering.Ascending)
