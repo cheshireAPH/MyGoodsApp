@@ -40,10 +40,19 @@ window.initCropperWhenImageReady = function () {
 window.hasOpener = () => !!window.opener;
 
 window.registerPageShowHandler = function (dotnetRef) {
+    // スマホ（PWA）・iOS Safari・Android Chrome
     window.addEventListener("pageshow", function () {
         dotnetRef.invokeMethodAsync("OnPageShow");
     });
+
+    // PC Chrome / Edge 対策（pageshow が発火しない）
+    document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible") {
+            dotnetRef.invokeMethodAsync("OnPageShow");
+        }
+    });
 };
+
 
 window.selectAllInside = (rootComponent) => {
     if (!rootComponent) return;

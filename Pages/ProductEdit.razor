@@ -545,20 +545,34 @@
             s.Variants[i].OrderIndex = i;
     }
 
+    /// <summary>子商品上移動</summary>
+    /// <param name="index"></param>
     void MoveSourceUp(int index)
     {
         if (index == 0) return;
+
         var item = sources[index];
         sources.RemoveAt(index);
         sources.Insert(index - 1, item);
+
+        // ★ OrderIndex を詰め直す
+        for (int i = 0; i < sources.Count; i++)
+            sources[i].Source.OrderIndex = i;
     }
 
+    /// <summary>子商品下移動</summary>
+    /// <param name="index"></param>
     void MoveSourceDown(int index)
     {
         if (index == sources.Count - 1) return;
+
         var item = sources[index];
         sources.RemoveAt(index);
         sources.Insert(index + 1, item);
+
+        // ★ OrderIndex を詰め直す
+        for (int i = 0; i < sources.Count; i++)
+            sources[i].Source.OrderIndex = i;
     }
 
     /// <summary>画像編集起動</summary>
