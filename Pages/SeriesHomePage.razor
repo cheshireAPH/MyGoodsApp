@@ -55,11 +55,9 @@
 
 </MudPaper>
 
-<!-- 右下の丸い＋ボタン（FAB） -->
-<MudFab Icon="@Icons.Material.Filled.Add"
-        Color="Color.Primary"
-        Class="fab-add"
-        OnClick="AddSeriesDialog" />
+<MudIconButton Icon="@Icons.Material.Filled.Add"
+               Class="fab-add fab-round"
+               OnClick="AddSeriesDialog" />
 
 @code {
     List<Series>? seriesList;
