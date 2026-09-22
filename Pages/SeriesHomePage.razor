@@ -1,0 +1,126 @@
+﻿@page "/"
+@inject SeriesRepository SeriesRepo
+@inject NavigationManager Nav
+@inject IDialogService Dialog
+
+<MudPaper Class="pa-4 mx-auto" MaxWidth="900px" Elevation="4">
+
+    <MudText Typo="Typo.h5" Class="mb-4">作品一覧</MudText>
+
+    @if (seriesList == null)
+    {
+        <MudProgressCircular Indeterminate="true" />
+    }
+    else
+    {
+        <MudList T="Series" Dense="true">
+            @foreach (var s in seriesList)
+            {
+                <MudListItem @key="s.Id">
+
+                    <MudListItemText>@s.Name</MudListItemText>
+
+                    <!-- 商品一覧 -->
+                    <MudListItemIcon>
+                        <MudIconButton Icon="@Icons.Material.Filled.Inventory"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => Nav.NavigateTo($"/series/{s.Id}/products"))" />
+                    </MudListItemIcon>
+
+                    <!-- キャラ一覧 -->
+                    <MudListItemIcon>
+                        <MudIconButton Icon="@Icons.Material.Filled.Face"
+                                       Color="Color.Secondary"
+                                       OnClick="@(() => Nav.NavigateTo($"/series/{s.Id}/characters"))" />
+                    </MudListItemIcon>
+
+                    <!-- 編集 -->
+                    <MudListItemIcon>
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                       Color="Color.Info"
+                                       OnClick="@(() => EditSeriesDialog(s))" />
+                    </MudListItemIcon>
+
+                    <!-- 削除 -->
+                    <MudListItemIcon>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Color="Color.Error"
+                                       OnClick="@(() => DeleteSeries(s))" />
+                    </MudListItemIcon>
+
+                </MudListItem>
+            }
+        </MudList>
+    }
+
+</MudPaper>
+
+<!-- 右下の丸い＋ボタン（FAB） -->
+<MudFab Icon="@Icons.Material.Filled.Add"
+        Color="Color.Primary"
+        Class="fab-add"
+        OnClick="AddSeriesDialog" />
+
+@code {
+    List<Series>? seriesList;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSeries();
+    }
+
+    private async Task LoadSeries()
+    {
+        seriesList = await SeriesRepo.GetAll();
+    }
+
+    private async Task AddSeriesDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "Series", new Series() }
+        };
+
+        var dialog = await Dialog.ShowAsync<MyGoodsApp.Pages.SeriesEditDialog>(
+                    "新規作品追加",
+            parameters
+        );
+
+        var result = await dialog.Result;
+        if (!result.Canceled)
+            await LoadSeries();
+    }
+
+    private async Task EditSeriesDialog(Series s)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Series", s }
+        };
+
+        var dialog = await Dialog.ShowAsync<MyGoodsApp.Pages.SeriesEditDialog>(
+                    "作品編集",
+            parameters
+        );
+
+        var result = await dialog.Result;
+        if (!result.Canceled)
+            await LoadSeries();
+    }
+
+    private async Task DeleteSeries(Series s)
+    {
+        bool? confirm = await Dialog.ShowMessageBoxAsync(
+            "確認",
+            $"{s.Name} を削除しますか？",
+            yesText: "削除",
+            cancelText: "キャンセル"
+        );
+
+        if (confirm == true)
+        {
+            await SeriesRepo.Delete(s.Id);
+            await LoadSeries();
+        }
+    }
+}

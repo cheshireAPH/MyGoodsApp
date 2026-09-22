@@ -523,3 +523,12 @@ a, .btn-link {
     outline: 3px solid var(--mud-palette-primary);
     outline-offset: -3px;
 }
+
+
+.fab-add {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+}
+
