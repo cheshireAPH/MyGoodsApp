@@ -1,8 +1,10 @@
 ﻿@page "/characters/{SeriesId:int}"
-@inject SupabaseClientService Supabase
+@inject CharacterRepository Characters
 @inject IDialogService Dialog
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+
+@implements IDisposable
 
 <MudPaper Class="pa-4 mx-auto" MaxWidth="600px" Elevation="4">
 
@@ -17,7 +19,7 @@
     <div @ref="listRef">
         @foreach (var c in characterList)
         {
-            <div class="sortable-item">
+            <div class="sortable-item" @key="c.Id">
                 <span class="drag-handle" style="cursor:grab;">☰</span>
                 <span>@c.Name</span>
 
@@ -66,14 +68,7 @@
 
     private async Task LoadCharacters()
     {
-        var result = await Supabase.Client
-            .From<Character>()
-            .Select("*")
-            .Filter("series_id", Operator.Equals, SeriesId)
-            .Order("order_index", Ordering.Ascending)
-            .Get();
-
-        characterList = result.Models;
+        characterList = await Characters.GetBySeries(SeriesId);
     }
 
     private async Task AddCharacterDialog()
@@ -121,11 +116,11 @@
 
         if (confirm == true)
         {
-            await Supabase.Client.From<Character>().Delete(c);
+            await Characters.Delete(c.Id);
             await LoadCharacters();
         }
     }
-    
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -143,13 +138,20 @@
         characterList.RemoveAt(evt.oldIndex);
         characterList.Insert(evt.newIndex, item);
 
-        // order_index 保存
-        for (int i = 0; i < characterList.Count; i++)
-        {
-            characterList[i].OrderIndex = i;
-            await Supabase.Client.From<Character>().Upsert(characterList[i]);
-        }
+        // ★ 並列保存（高速化）
+        var tasks = characterList.Select((ch, i) =>
+            Characters.UpdateOrderIndex(ch.Id, i)
+        );
+
+        await Task.WhenAll(tasks);
 
         StateHasChanged();
+    }
+
+    // ★ JSInterop のクリーンアップ
+    public void Dispose()
+    {
+        dotnetRef?.Dispose();
+        JS.InvokeVoidAsync("disposeSortable", listRef);
     }
 }

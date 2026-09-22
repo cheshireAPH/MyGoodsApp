@@ -17,6 +17,13 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddScoped(_ => new HttpClient());
 builder.Services.AddScoped<LayoutStateService>();
 builder.Services.AddSingleton<ImageGenerateService>();
+
+builder.Services.AddScoped<CharacterRepository>();
+builder.Services.AddScoped<ProductRepository>();
+builder.Services.AddScoped<ProductVariantCharacterRepository>();
+builder.Services.AddScoped<SeriesRepository>();
+builder.Services.AddScoped<StorageService>();
+
 builder.Services.AddMudServices();
 
 await builder.Build().RunAsync();
