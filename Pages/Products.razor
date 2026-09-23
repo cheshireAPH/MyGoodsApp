@@ -34,7 +34,7 @@
 
     #region 変数
 
-    List<Series> AllSeries = new();
+    List<Models.Series> AllSeries = new();
     int? SelectedSeriesId;
     int ActiveTab = 0;
 
@@ -603,7 +603,7 @@
     private async Task LoadSeries()
     {
         var seriesResult = await Supabase.Client
-            .From<Series>()
+            .From<Models.Series>()
             .Order(x => x.Name, Ordering.Ascending)
             .Get();
 

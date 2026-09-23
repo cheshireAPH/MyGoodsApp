@@ -58,13 +58,13 @@
 
 @code {
     List<Product> Items = new();
-    List<Series> AllSeries = new();
+    List<Models.Series> AllSeries = new();
 
     protected override async Task OnInitializedAsync()
     {
         // 作品一覧
         var seriesResult = await Supabase.Client
-            .From<Series>()
+            .From<Models.Series>()
             .Select("*")
             .Order(x => x.Name, Ordering.Ascending)
             .Get();

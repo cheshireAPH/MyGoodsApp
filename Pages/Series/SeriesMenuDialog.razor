@@ -1,0 +1,26 @@
+﻿@namespace MyGoodsApp.Pages
+@using MudBlazor
+
+<MudDialog>
+    <MudDialogTitle>操作を選択</MudDialogTitle>
+
+    <MudList T="object">
+        <MudListItem T="object" OnClick="@(() => MudDialog.Close(DialogResult.Ok("edit")))">
+            編集
+        </MudListItem>
+
+        <MudListItem T="object" OnClick="@(() => MudDialog.Close(DialogResult.Ok("delete")))">
+            削除
+        </MudListItem>
+    </MudList>
+
+    <MudDialogActions>
+        <MudButton OnClick="@(() => MudDialog.Close(DialogResult.Cancel()))">
+            閉じる
+        </MudButton>
+    </MudDialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IDialogReference MudDialog { get; set; } = default!;
+}

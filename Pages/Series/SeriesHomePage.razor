@@ -2,6 +2,7 @@
 @inject SeriesRepository SeriesRepo
 @inject NavigationManager Nav
 @inject IDialogService Dialog
+@inject IJSRuntime JS
 
 <MudPaper Class="pa-4 mx-auto" MaxWidth="900px" Elevation="4">
 
@@ -18,35 +19,12 @@
             {
                 <MudListItem @key="s.Id">
 
-                    <MudListItemText>@s.Name</MudListItemText>
+                    <div @ref="itemRefs[s.Id]"
+                         @onclick="@(() => Nav.NavigateTo($"/series/{s.Id}/products"))">
 
-                    <!-- 商品一覧 -->
-                    <MudListItemIcon>
-                        <MudIconButton Icon="@Icons.Material.Filled.Inventory"
-                                       Color="Color.Primary"
-                                       OnClick="@(() => Nav.NavigateTo($"/series/{s.Id}/products"))" />
-                    </MudListItemIcon>
+                        <MudListItemText>@s.Name</MudListItemText>
 
-                    <!-- キャラ一覧 -->
-                    <MudListItemIcon>
-                        <MudIconButton Icon="@Icons.Material.Filled.Face"
-                                       Color="Color.Secondary"
-                                       OnClick="@(() => Nav.NavigateTo($"/series/{s.Id}/characters"))" />
-                    </MudListItemIcon>
-
-                    <!-- 編集 -->
-                    <MudListItemIcon>
-                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                       Color="Color.Info"
-                                       OnClick="@(() => EditSeriesDialog(s))" />
-                    </MudListItemIcon>
-
-                    <!-- 削除 -->
-                    <MudListItemIcon>
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                       Color="Color.Error"
-                                       OnClick="@(() => DeleteSeries(s))" />
-                    </MudListItemIcon>
+                    </div>
 
                 </MudListItem>
             }
@@ -58,18 +36,71 @@
 <MudIconButton Icon="@Icons.Material.Filled.Add"
                Class="fab-add fab-round"
                OnClick="AddSeriesDialog" />
-
 @code {
     List<Series>? seriesList;
+
+    Dictionary<int, ElementReference> itemRefs = new();
 
     protected override async Task OnInitializedAsync()
     {
         await LoadSeries();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && seriesList != null)
+        {
+            foreach (var s in seriesList)
+            {
+                if (itemRefs.TryGetValue(s.Id, out var el))
+                {
+                    await JS.InvokeVoidAsync(
+                        "longPress.register",
+                        el,
+                        DotNetObjectReference.Create(this),
+                        s.Id
+                    );
+                }
+            }
+        }
+    }
+
     private async Task LoadSeries()
     {
         seriesList = await SeriesRepo.GetAll();
+        itemRefs.Clear();
+    }
+
+    // 長押しイベント
+    [JSInvokable]
+    public async Task OnLongPress(int seriesId)
+    {
+        var s = seriesList!.First(x => x.Id == seriesId);
+        await OpenSeriesMenu(s);
+    }
+
+    private async Task OpenSeriesMenu(Series s)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Series", s }
+        };
+
+        var dialog = await Dialog.ShowAsync<SeriesMenuDialog>(
+            $"{s.Name} の操作",
+            parameters
+        );
+
+        var result = await dialog.Result;
+
+        if (result.Data is string action)
+        {
+            if (action == "edit")
+                await EditSeriesDialog(s);
+
+            if (action == "delete")
+                await DeleteSeries(s);
+        }
     }
 
     private async Task AddSeriesDialog()
