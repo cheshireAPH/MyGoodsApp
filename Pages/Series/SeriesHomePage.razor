@@ -15,16 +15,14 @@
     else
     {
         <MudList T="Series" Dense="true">
-            @for (int i = 0; i < seriesList.Count; i++)
+            @foreach (var s in seriesList)
             {
-                var s = seriesList[i];
+                <MudListItem T="Series" @key="s.Id">
 
-                <MudListItem @key="s.Id">
-
-                    <div @ref="itemRefs[i]"
+                    <div id="series-item-@s.Id"
                          @onclick="@(() => Nav.NavigateTo($"/series/{s.Id}/products"))">
 
-                        <MudListItemText>@s.Name</MudListItemText>
+                        <MudText>@s.Name</MudText>
 
                     </div>
 
@@ -38,10 +36,9 @@
 <MudIconButton Icon="@Icons.Material.Filled.Add"
                Class="fab-add fab-round"
                OnClick="AddSeriesDialog" />
+
 @code {
     List<Series>? seriesList;
-
-    List<ElementReference> itemRefs = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -52,13 +49,13 @@
     {
         if (firstRender && seriesList != null)
         {
-            for (int i = 0; i < seriesList.Count; i++)
+            foreach (var s in seriesList)
             {
                 await JS.InvokeVoidAsync(
-                    "longPress.register",
-                    itemRefs[i],
+                    "longPress.registerById",
+                    $"series-item-{s.Id}",
                     DotNetObjectReference.Create(this),
-                    seriesList[i].Id
+                    s.Id
                 );
             }
         }
@@ -67,10 +64,6 @@
     private async Task LoadSeries()
     {
         seriesList = await SeriesRepo.GetAll();
-
-        itemRefs = new List<ElementReference>(seriesList.Count);
-        for (int i = 0; i < seriesList.Count; i++)
-            itemRefs.Add(new ElementReference());
     }
 
     // 長押しイベント
@@ -113,7 +106,7 @@
         };
 
         var dialog = await Dialog.ShowAsync<MyGoodsApp.Pages.SeriesEditDialog>(
-                    "新規作品追加",
+            "新規作品追加",
             parameters
         );
 
@@ -130,7 +123,7 @@
         };
 
         var dialog = await Dialog.ShowAsync<MyGoodsApp.Pages.SeriesEditDialog>(
-                    "作品編集",
+            "作品編集",
             parameters
         );
 

@@ -1,0 +1,16 @@
+﻿<div @ref="Root"
+     @onclick="OnClick">
+    <MudListItemText>@Series.Name</MudListItemText>
+</div>
+
+@code {
+    [Parameter] public Series Series { get; set; }
+    [Parameter] public EventCallback<Series> Clicked { get; set; }
+
+    public ElementReference Root { get; set; }
+
+    private async Task OnClick()
+    {
+        await Clicked.InvokeAsync(Series);
+    }
+}
