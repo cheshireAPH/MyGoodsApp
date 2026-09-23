@@ -15,11 +15,13 @@
     else
     {
         <MudList T="Series" Dense="true">
-            @foreach (var s in seriesList)
+            @for (int i = 0; i < seriesList.Count; i++)
             {
+                var s = seriesList[i];
+
                 <MudListItem @key="s.Id">
 
-                    <div @ref="itemRefs[s.Id]"
+                    <div @ref="itemRefs[i]"
                          @onclick="@(() => Nav.NavigateTo($"/series/{s.Id}/products"))">
 
                         <MudListItemText>@s.Name</MudListItemText>
@@ -39,7 +41,7 @@
 @code {
     List<Series>? seriesList;
 
-    Dictionary<int, ElementReference> itemRefs = new();
+    List<ElementReference> itemRefs = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -50,17 +52,14 @@
     {
         if (firstRender && seriesList != null)
         {
-            foreach (var s in seriesList)
+            for (int i = 0; i < seriesList.Count; i++)
             {
-                if (itemRefs.TryGetValue(s.Id, out var el))
-                {
-                    await JS.InvokeVoidAsync(
-                        "longPress.register",
-                        el,
-                        DotNetObjectReference.Create(this),
-                        s.Id
-                    );
-                }
+                await JS.InvokeVoidAsync(
+                    "longPress.register",
+                    itemRefs[i],
+                    DotNetObjectReference.Create(this),
+                    seriesList[i].Id
+                );
             }
         }
     }
@@ -68,7 +67,10 @@
     private async Task LoadSeries()
     {
         seriesList = await SeriesRepo.GetAll();
-        itemRefs.Clear();
+
+        itemRefs = new List<ElementReference>(seriesList.Count);
+        for (int i = 0; i < seriesList.Count; i++)
+            itemRefs.Add(new ElementReference());
     }
 
     // 長押しイベント
