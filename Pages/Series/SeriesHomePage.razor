@@ -20,7 +20,7 @@
                 <MudListItem T="Series" @key="s.Id">
 
                     <div id="series-item-@s.Id"
-                         @onclick="@(() => Nav.NavigateTo($"/series/{s.Id}/products"))">
+                         @onclick="@(() => Nav.NavigateTo($"series/{s.Id}/products"))">
 
                         <MudText>@s.Name</MudText>
 
