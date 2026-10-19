@@ -7,10 +7,11 @@
     <title>MyGoodsApp</title>
 
     <script>
-        var baseHref = window.location.hostname === "localhost"
-            ? "/"
-            : "MyGoodsApp/";
-        document.write('<base href="' + baseHref + '">');
+        // ホスト名に応じて自動的にベースパスを設定
+        var basePath = window.location.hostname.includes('github.io') 
+            ? '/MyGoodsApp/' 
+            : '/';
+        document.write('<base href="' + basePath + '">');
     </script>
 
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
