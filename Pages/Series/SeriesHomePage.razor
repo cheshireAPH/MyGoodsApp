@@ -47,10 +47,12 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && seriesList != null)
+        // seriesList が null でなければ登録（firstRender チェックなし）
+        if (seriesList != null)
         {
             foreach (var s in seriesList)
             {
+                Console.WriteLine($"Registering longpress for series: {s.Id}");
                 await JS.InvokeVoidAsync(
                     "longPress.registerById",
                     $"series-item-{s.Id}",

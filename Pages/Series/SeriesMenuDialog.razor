@@ -2,17 +2,19 @@
 @using MudBlazor
 
 <MudDialog>
-    <MudDialogTitle>操作を選択</MudDialogTitle>
+    <MudDialogTitle>@Series.Name の操作</MudDialogTitle>
 
-    <MudList T="object">
-        <MudListItem T="object" OnClick="@(() => MudDialog.Close(DialogResult.Ok("edit")))">
-            編集
-        </MudListItem>
+    <MudDialogContent>
+        <MudList T="object">
+            <MudListItem T="object" OnClick="@(() => MudDialog.Close(DialogResult.Ok("edit")))">
+                編集
+            </MudListItem>
 
-        <MudListItem T="object" OnClick="@(() => MudDialog.Close(DialogResult.Ok("delete")))">
-            削除
-        </MudListItem>
-    </MudList>
+            <MudListItem T="object" OnClick="@(() => MudDialog.Close(DialogResult.Ok("delete")))">
+                削除
+            </MudListItem>
+        </MudList>
+    </MudDialogContent>
 
     <MudDialogActions>
         <MudButton OnClick="@(() => MudDialog.Close(DialogResult.Cancel()))">
@@ -23,4 +25,7 @@
 
 @code {
     [CascadingParameter] IDialogReference MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public Models.Series Series { get; set; } = default!;
 }

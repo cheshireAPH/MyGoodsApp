@@ -7,11 +7,10 @@
     <title>MyGoodsApp</title>
 
     <script>
-        // ホスト名に応じて自動的にベースパスを設定
-        var basePath = window.location.hostname.includes('github.io') 
-            ? '/MyGoodsApp/' 
-            : '/';
-        document.write('<base href="' + basePath + '">');
+        var baseHref = window.location.hostname === "localhost"
+            ? "/"
+            : "MyGoodsApp/";
+        document.write('<base href="' + baseHref + '">');
     </script>
 
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
@@ -49,6 +48,7 @@
     <!-- JS -->
     <script src="js/open.js"></script>
     <script src="js/cropper.js"></script>
+    <script src="js/longpress.js"></script>
     <script src="js/site.js"></script>
     <script src="js/longpress.js?v=1"></script>
 
